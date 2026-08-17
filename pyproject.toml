@@ -1,0 +1,29 @@
+[project]
+name = "datamind"
+version = "0.1.0"
+description = "An AI Data Analyst agent that turns datasets into decision-ready dashboards, insights, and recommendations."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "anthropic>=0.40.0",
+    "pandas>=2.0.0",
+    "openpyxl>=3.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+datamind = "datamind.cli:main"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["datamind*"]
+
+[tool.setuptools.package-data]
+datamind = ["prompts/*.md"]
