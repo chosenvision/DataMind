@@ -21,34 +21,61 @@ trend/anomaly/root-cause analysis, risks, opportunities, recommendations) intern
 but respond with ONLY a single JSON object (no markdown, no code fences, no commentary)
 matching exactly this shape:
 
-{{
+{
   "dataset_classification": "short label, e.g. Sales",
   "executive_summary": "2-4 plain-language sentences on what's happening and why it matters",
+  "filter_columns": ["<exact column name>", "<exact column name>"],
   "kpis": [
-    {{"name": "Total Revenue", "column": "<exact column name from the dataset>", "agg": "sum", "format": "currency", "meaning": "one line"}}
+    {
+      "name": "Total Revenue",
+      "column": "<exact column name from the dataset>",
+      "agg": "sum",
+      "format": "currency",
+      "meaning": "one line shown as the KPI card caption",
+      "definition": "one sentence, plain language",
+      "formula_text": "e.g. Net Sales = Gross Sales - Discounts",
+      "why_it_matters": "one sentence",
+      "good_result": "what a healthy value looks like",
+      "bad_result": "what a concerning value looks like",
+      "best_visualization": "e.g. Bar chart by region"
+    }
   ],
   "charts": [
-    {{"title": "Revenue by Region", "type": "bar", "category_column": "<exact column name>", "value_column": "<exact column name>", "agg": "sum"}},
-    {{"title": "Revenue Trend", "type": "line", "date_column": "<exact column name>", "value_column": "<exact column name>", "agg": "sum", "freq": "M"}}
+    {"title": "Revenue by Region", "type": "bar", "category_column": "<exact column name>", "value_column": "<exact column name>", "agg": "sum"},
+    {"title": "Revenue Trend", "type": "line", "date_column": "<exact column name>", "value_column": "<exact column name>", "agg": "sum", "freq": "M"},
+    {"title": "Revenue Share by Region", "type": "doughnut", "category_column": "<exact column name>", "value_column": "<exact column name>", "agg": "sum"}
   ],
   "insights_text": ["3-6 short, plain-language insight sentences, each standalone"],
   "risks": ["short plain-language risk statements"],
   "opportunities": ["short plain-language opportunity statements"],
-  "recommendations": [{{"action": "specific action", "priority": "High|Medium|Low", "impact": "expected business impact, one line"}}],
+  "recommendations": [{"action": "specific action", "priority": "High|Medium|Low", "impact": "expected business impact, one line"}],
   "assumptions": ["short assumption statements"],
   "limitations": ["what this dataset cannot answer"]
-}}
+}
 
 Rules:
-- "column", "category_column", "value_column", "date_column" MUST be exact column
-  names copied verbatim from the DATASET PROFILE below — never invented or renamed.
+- "column", "category_column", "value_column", "date_column", and every entry in
+  "filter_columns" MUST be exact column names copied verbatim from the DATASET
+  PROFILE below — never invented or renamed.
+- "filter_columns": 0-4 categorical (non-numeric) columns worth slicing the whole
+  dashboard by via dropdowns — e.g. region, segment, product, discount band. Pick
+  columns with a manageable number of distinct values (roughly 2-12). Omit if the
+  dataset has no good categorical slicer.
 - "agg" MUST be one of: sum, mean, median, max, min, count, nunique, row_count.
   Use "row_count" with no column for a plain row-count KPI (e.g. Total Orders).
+  Prefer sum/mean/max/min/row_count where possible - median and nunique are shown
+  as a one-time snapshot rather than a live figure, since they don't respond to the
+  dashboard's filters the way the others do.
 - "format" MUST be one of: currency, percent, number. Only use "percent" for a
   column stored as a 0-1 fraction (e.g. a 0.1 discount rate) — it will be
   displayed multiplied by 100, matching spreadsheet percent formatting.
-- 4-8 kpis, 1-4 charts, each insight/risk/opportunity a single short sentence —
-  write for someone with no data background, not a technical audience.
+- Chart "type" is a hint (bar/line/doughnut) - the actual rendering decides bar vs.
+  a red/teal diverging bar automatically from whether the real per-category values
+  can go negative (e.g. a margin or profit breakdown), so don't worry about getting
+  this perfectly right.
+- 4-8 kpis (the first 4 become the Dashboard's KPI cards; all appear in the KPI
+  Reference sheet), 1-5 charts, each insight/risk/opportunity a single short
+  sentence — write for someone with no data background, not a technical audience.
 - Every claim must be traceable to the dataset profile; never fabricate numbers.
 """.strip()
 

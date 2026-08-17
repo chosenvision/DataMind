@@ -31,18 +31,34 @@ Studio API key is enough to run this end to end, no billing setup required.
    plain-language insights/risks/opportunities/recommendations. Column names
    in the plan are validated against the real dataset — anything that doesn't
    match an actual column is dropped rather than guessed at.
-4. `datamind/dashboard.py` takes that plan and the real dataframe and computes
-   every KPI and chart value with pandas, then builds a multi-sheet Excel
-   workbook with `openpyxl`: an **Overview** sheet (KPI cards, executive
-   summary, insights/risks/opportunities, prioritized recommendations), a
-   **Dashboard** sheet with native Excel bar/line charts, a **Data** sheet
-   (the full dataset as a real Excel Table), a **Power BI Guide** sheet
-   (import steps + suggested DAX measures generated from the same KPI specs),
-   and an **Assumptions & Limitations** sheet.
+4. `datamind/dashboard.py` takes that plan and builds a **formula-driven**
+   multi-sheet Excel workbook with `openpyxl` — the same architecture as a
+   hand-built interactive Excel dashboard, not a snapshot of numbers:
+   - **Dashboard**: title, up to 4 dropdown filters (data-validated against a
+     hidden `Lists` sheet), 4 KPI cards wired to live formulas, and up to 5
+     charts (a trend line, a doughnut for share-of-total, plain bar charts,
+     and red/teal **diverging** bars for any metric whose per-category values
+     can go negative, e.g. a margin or profit breakdown — decided from the
+     real computed values, never from a guess).
+   - **Calc**: the formula engine. Dropdown values resolve to `SUMIFS`/
+     `AVERAGEIFS`/`COUNTIFS` wildcard filters (`"All"` → `"*"`), and every KPI
+     card and chart is a live formula against **Data** — change a dropdown
+     and everything recalculates, exactly like a real BI dashboard. (Two
+     aggregations Excel has no `*IFS` form for — median, distinct count — fall
+     back to a one-time computed value instead of a formula.)
+   - **KPI Reference**: a definitions table (formula, why it matters, good vs.
+     bad result, best visualization) plus the insights/risks/opportunities/
+     prioritized recommendations.
+   - **Data**: the full dataset as a real Excel Table, plus a derived
+     `<column> (Month)` helper column for any date field used in a trend chart.
+   - **Power BI Guide**: import steps + suggested DAX measures generated from
+     the same KPI specs.
+   - **Assumptions & Limitations**.
 5. The web UI and CLI both also render/print a compact on-screen summary
-   (KPI cards, insights, recommendations) alongside the downloadable
-   workbook — `agent.analyze()` is still available if you want the full
-   28-section narrative report as plain text instead.
+   (KPI cards, insights, recommendations) computed once with pandas for
+   display — independent of the workbook's live formulas — alongside the
+   downloadable file. `agent.analyze()` is still available if you want the
+   full 28-section narrative report as plain text instead.
 
 ## Setup
 
@@ -112,11 +128,16 @@ before pointing it at your own data.
 pytest
 ```
 
-Tests cover the deterministic dataset profiler, configuration validation, the
-KPI/chart computation and Excel workbook building in `datamind/dashboard.py`
-(against the real sample dataset, no mocking needed since it's pure pandas),
-and the `/api/analyze` request/response handling (with the Gemini call
-mocked). They do not call the Gemini API.
+Tests cover the deterministic dataset profiler, configuration validation, and
+`datamind/dashboard.py`'s workbook building against the real sample dataset
+(no mocking needed since it's pure pandas/openpyxl) — including an
+independent formula interpreter that parses the generated `SUMIFS`/
+`AVERAGEIFS`/`COUNTIFS` strings and re-evaluates them against the dataframe,
+so a plausible-looking-but-wrong formula (bad column letter, off-by-one row
+range) gets caught even though nothing in this environment can open the file
+in real Excel/LibreOffice to check. The `/api/analyze` request/response
+handling is covered too (with the Gemini call mocked). Nothing calls the
+Gemini API.
 
 ## Web app / Vercel deployment
 
@@ -192,7 +213,7 @@ datamind/
   config.py                      # UserConfig: tool, depth, objective, context
   profiler.py                    # deterministic dataset profiling (pandas)
   agent.py                       # DataAnalystAgent: plan_dashboard() (JSON plan) + analyze() (narrative)
-  dashboard.py                   # computes KPIs/charts with pandas, builds the Excel workbook (openpyxl)
+  dashboard.py                   # builds the formula-driven Excel workbook (openpyxl): Dashboard/Calc/KPI Reference/Data/Power BI Guide
   cli.py                         # `datamind` command-line entry point
 sample_data/sample_sales.csv
 tests/

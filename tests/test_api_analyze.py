@@ -94,5 +94,5 @@ def test_happy_path_returns_summary_and_workbook():
 
     workbook_bytes = base64.b64decode(data["workbook_base64"])
     wb = openpyxl.load_workbook(io.BytesIO(workbook_bytes))
-    assert "Overview" in wb.sheetnames
+    assert "Dashboard" in wb.sheetnames
     assert "Data" in wb.sheetnames
