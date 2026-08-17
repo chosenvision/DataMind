@@ -8,7 +8,7 @@ class handler(BaseHTTPRequestHandler):
         body = json.dumps(
             {
                 "status": "ok",
-                "anthropic_api_key_configured": bool(os.environ.get("ANTHROPIC_API_KEY")),
+                "gemini_api_key_configured": bool(os.environ.get("GEMINI_API_KEY")),
             }
         ).encode("utf-8")
         self.send_response(200)

@@ -31,8 +31,8 @@ class handler(BaseHTTPRequestHandler):
             self._send_json(400, {"error": "Missing 'content' (dataset text)"})
             return
 
-        if not os.environ.get("ANTHROPIC_API_KEY"):
-            self._send_json(500, {"error": "Server is not configured with ANTHROPIC_API_KEY"})
+        if not os.environ.get("GEMINI_API_KEY"):
+            self._send_json(500, {"error": "Server is not configured with GEMINI_API_KEY"})
             return
 
         try:

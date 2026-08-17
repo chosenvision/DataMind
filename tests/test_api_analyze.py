@@ -45,11 +45,11 @@ def _post(payload: dict, env: dict | None = None) -> tuple[int, dict]:
 def test_missing_api_key_returns_500():
     status, data = _post({"content": "a,b\n1,2\n", "filename": "x.csv"}, env={})
     assert status == 500
-    assert "ANTHROPIC_API_KEY" in data["error"]
+    assert "GEMINI_API_KEY" in data["error"]
 
 
 def test_missing_content_returns_400():
-    status, data = _post({"filename": "x.csv"}, env={"ANTHROPIC_API_KEY": "fake-key"})
+    status, data = _post({"filename": "x.csv"}, env={"GEMINI_API_KEY": "fake-key"})
     assert status == 400
     assert "content" in data["error"]
 
@@ -57,14 +57,14 @@ def test_missing_content_returns_400():
 def test_invalid_config_value_returns_400():
     status, data = _post(
         {"content": "a,b\n1,2\n", "tool": "NotAValidTool"},
-        env={"ANTHROPIC_API_KEY": "fake-key"},
+        env={"GEMINI_API_KEY": "fake-key"},
     )
     assert status == 400
     assert "preferred_tool" in data["error"]
 
 
 def test_happy_path_returns_analysis_result():
-    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "fake-key"}):
+    with patch.dict(os.environ, {"GEMINI_API_KEY": "fake-key"}):
         with patch.object(analyze_mod.DataAnalystAgent, "analyze", return_value="MOCK RESULT"):
             status, data = _post(
                 {"content": "a,b\n1,2\n", "filename": "x.csv", "depth": "Quick Analysis"}

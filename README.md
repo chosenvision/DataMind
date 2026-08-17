@@ -4,8 +4,11 @@ DataMind turns a raw dataset into a decision-making system, not just a pile of
 charts. It packages an **Advanced AI Data Analyst, Senior BI Developer, Data
 Visualization Expert, and Dashboard UX/UI Designer** persona as a reusable
 system prompt, profiles your dataset deterministically with pandas, and sends
-both to Claude to produce a full dataset audit, KPI set, EDA, trend/anomaly/
+both to Gemini to produce a full dataset audit, KPI set, EDA, trend/anomaly/
 root-cause analysis, dashboard design, and prioritized recommendations.
+
+Uses the Gemini API (rather than a paid-only provider) so a free Google AI
+Studio API key is enough to run this end to end, no billing setup required.
 
 ## How it works
 
@@ -21,14 +24,17 @@ root-cause analysis, dashboard design, and prioritized recommendations.
 3. `datamind/agent.py` combines the role prompt, your configuration (preferred
    tool, analysis depth, dashboard objective, business context, target
    audience, brand style), and the dataset profile into a single request to
-   the Claude API, and returns the full analysis.
+   the Gemini API, and returns the full analysis.
 
 ## Setup
 
 ```bash
 pip install -e ".[dev]"
-export ANTHROPIC_API_KEY=sk-ant-...
+export GEMINI_API_KEY=...
 ```
+
+Get a free API key from [Google AI Studio](https://aistudio.google.com/apikey)
+— no billing setup required for the free tier (rate-limited).
 
 ## CLI usage
 
@@ -74,8 +80,8 @@ pytest
 ```
 
 Tests cover the deterministic dataset profiler, configuration validation, and
-the `/api/analyze` request/response handling (with the Claude call mocked);
-they do not call the Claude API.
+the `/api/analyze` request/response handling (with the Gemini call mocked);
+they do not call the Gemini API.
 
 ## Web app / Vercel deployment
 
@@ -91,13 +97,14 @@ build step needed.
 npm install -g vercel   # one-time
 vercel login
 vercel link             # creates/links the Vercel project
-vercel env add ANTHROPIC_API_KEY production   # paste your key when prompted
+vercel env add GEMINI_API_KEY production   # paste your key when prompted
 vercel --prod
 ```
 
 Or connect the GitHub repo in the Vercel dashboard (Import Project), then add
-`ANTHROPIC_API_KEY` under Project Settings → Environment Variables before the
-first deploy.
+`GEMINI_API_KEY` under Project Settings → Environment Variables before the
+first deploy. Environment variables only apply to deployments created after
+they're saved — redeploy if you add or change one after the fact.
 
 **Local dev with the Vercel CLI** (serves the static UI and the Python
 functions together, matching production):
@@ -120,9 +127,12 @@ vercel dev
   analysis call can take longer than the platform's 10s default. Hobby plans
   cap function duration at 60s; for `Deep Dive` analyses on large datasets you
   may need a Pro plan for a longer duration.
-- `GET /api/health` returns `{"status": "ok", "anthropic_api_key_configured": true|false}`
+- `GET /api/health` returns `{"status": "ok", "gemini_api_key_configured": true|false}`
   so you can confirm the deployment is wired up correctly without running a
   full analysis.
+- The Gemini free tier is rate-limited (requests per minute/day); if you hit
+  those limits, the analysis call will fail with an error from the API — wait
+  and retry, or switch to a paid Gemini tier for higher limits.
 
 ## Project layout
 
@@ -139,7 +149,7 @@ datamind/
   role.py                        # loads the role prompt
   config.py                      # UserConfig: tool, depth, objective, context
   profiler.py                    # deterministic dataset profiling (pandas)
-  agent.py                       # DataAnalystAgent: wires prompt + profile -> Claude
+  agent.py                       # DataAnalystAgent: wires prompt + profile -> Gemini
   cli.py                         # `datamind` command-line entry point
 sample_data/sample_sales.csv
 tests/

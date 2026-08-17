@@ -5,7 +5,7 @@ description = "An AI Data Analyst agent that turns datasets into decision-ready 
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "anthropic>=0.40.0",
+    "google-genai>=1.0.0",
     "pandas>=2.0.0",
     "openpyxl>=3.1.0",
 ]
