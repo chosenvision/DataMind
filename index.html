@@ -3,68 +3,276 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light dark" />
 <title>DataMind — AI Data Analyst</title>
 <style>
   :root {
-    --bg: #f5f6fa;
-    --card: #ffffff;
-    --border: #e2e4ec;
+    --bg: #f4f5fb;
+    --bg-2: #eceffb;
+    --card: rgba(255, 255, 255, 0.78);
+    --card-solid: #ffffff;
+    --border: rgba(20, 22, 31, 0.09);
     --text: #14161f;
     --muted: #5c6070;
-    --primary: #4f46e5;
-    --primary-dark: #4338ca;
+    --primary: #6366f1;
+    --primary-2: #8b5cf6;
+    --accent: #06b6d4;
     --success: #10b981;
     --error: #dc2626;
-    --radius: 12px;
+    --radius: 18px;
+    --radius-sm: 10px;
+    --shadow: 0 20px 45px -20px rgba(30, 30, 60, 0.28);
+    --shadow-sm: 0 8px 20px -10px rgba(30, 30, 60, 0.18);
   }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0a0b12;
+      --bg-2: #111322;
+      --card: rgba(22, 24, 38, 0.68);
+      --card-solid: #14162350;
+      --border: rgba(255, 255, 255, 0.09);
+      --text: #eef0fb;
+      --muted: #9498ae;
+      --shadow: 0 20px 45px -20px rgba(0, 0, 0, 0.7);
+      --shadow-sm: 0 8px 20px -10px rgba(0, 0, 0, 0.6);
+    }
+  }
+
   * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
   body {
     margin: 0;
-    background: var(--bg);
+    min-height: 100vh;
     color: var(--text);
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(99, 102, 241, 0.16), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(139, 92, 246, 0.14), transparent 55%),
+      linear-gradient(180deg, var(--bg), var(--bg-2));
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    line-height: 1.5;
+    line-height: 1.55;
   }
-  header {
-    padding: 28px 24px 20px;
-    max-width: 1200px;
+
+  a { color: var(--primary); }
+
+  /* ---------- Hero ---------- */
+
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding: 20px 24px 8px;
+  }
+
+  .nav {
+    max-width: 1220px;
     margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0 8px;
   }
-  header h1 {
-    margin: 0 0 4px;
-    font-size: 26px;
-    letter-spacing: -0.02em;
+
+  .logo-mark {
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+    animation: pulse 3s ease-in-out infinite;
   }
-  header p {
-    margin: 0;
-    color: var(--muted);
-    font-size: 14px;
+
+  .nav-title {
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -0.01em;
   }
-  main {
-    max-width: 1200px;
+
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(70px);
+    opacity: 0.55;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .blob-1 {
+    width: 360px; height: 360px; top: -140px; left: -100px;
+    background: radial-gradient(circle at 30% 30%, #818cf8, transparent 70%);
+    animation: float-a 17s ease-in-out infinite alternate;
+  }
+  .blob-2 {
+    width: 320px; height: 320px; top: -60px; right: -120px;
+    background: radial-gradient(circle at 40% 40%, #67e8f9, transparent 70%);
+    animation: float-b 14s ease-in-out infinite alternate;
+  }
+  .blob-3 {
+    width: 280px; height: 280px; top: 160px; left: 40%;
+    background: radial-gradient(circle at 50% 50%, #c4b5fd, transparent 70%);
+    opacity: 0.35;
+    animation: float-a 20s ease-in-out infinite alternate-reverse;
+  }
+
+  @keyframes float-a {
+    from { transform: translate(0, 0) scale(1); }
+    to { transform: translate(40px, 30px) scale(1.08); }
+  }
+  @keyframes float-b {
+    from { transform: translate(0, 0) scale(1); }
+    to { transform: translate(-30px, 40px) scale(0.95); }
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15); }
+    50% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0.05); }
+  }
+
+  .hero-inner {
+    position: relative;
+    z-index: 1;
+    max-width: 1220px;
     margin: 0 auto;
-    padding: 0 24px 48px;
+    padding: 28px 0 34px;
     display: grid;
-    grid-template-columns: 380px 1fr;
-    gap: 20px;
+    grid-template-columns: 1fr 220px;
+    gap: 24px;
+    align-items: center;
+  }
+
+  .hero-copy h1 {
+    margin: 0 0 12px;
+    font-size: clamp(28px, 4vw, 42px);
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+  .hero-copy h1 span {
+    background: linear-gradient(120deg, var(--primary), var(--accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .hero-copy p {
+    margin: 0 0 18px;
+    color: var(--muted);
+    font-size: 15.5px;
+    max-width: 620px;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip {
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    opacity: 0;
+    animation: fade-up 0.6s ease forwards;
+  }
+  .chip:nth-child(1) { animation-delay: 0.05s; }
+  .chip:nth-child(2) { animation-delay: 0.15s; }
+  .chip:nth-child(3) { animation-delay: 0.25s; }
+  .chip:nth-child(4) { animation-delay: 0.35s; }
+
+  /* ---------- 3D cube ---------- */
+
+  .cube-stage {
+    perspective: 900px;
+    width: 150px;
+    height: 150px;
+    justify-self: center;
+  }
+  .cube {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    animation: spin-cube 18s linear infinite;
+  }
+  .cube .face {
+    position: absolute;
+    width: 150px;
+    height: 150px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.5), rgba(139, 92, 246, 0.28));
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    border-radius: 14px;
+  }
+  .face.front  { transform: translateZ(75px); }
+  .face.back   { transform: rotateY(180deg) translateZ(75px); }
+  .face.right  { transform: rotateY(90deg) translateZ(75px); }
+  .face.left   { transform: rotateY(-90deg) translateZ(75px); }
+  .face.top    { transform: rotateX(90deg) translateZ(75px); background: linear-gradient(135deg, rgba(6, 182, 212, 0.5), rgba(99, 102, 241, 0.28)); }
+  .face.bottom { transform: rotateX(-90deg) translateZ(75px); background: linear-gradient(135deg, rgba(6, 182, 212, 0.5), rgba(99, 102, 241, 0.28)); }
+
+  @keyframes spin-cube {
+    from { transform: rotateX(0deg) rotateY(0deg); }
+    to { transform: rotateX(360deg) rotateY(360deg); }
+  }
+
+  @media (max-width: 860px) {
+    .hero-inner { grid-template-columns: 1fr; }
+    .cube-stage { display: none; }
+  }
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---------- Main layout ---------- */
+
+  main {
+    position: relative;
+    z-index: 1;
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 0 24px 56px;
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    gap: 22px;
     align-items: start;
   }
   @media (max-width: 860px) {
-    main { grid-template-columns: 1fr; }
+    main { grid-template-columns: 1fr; padding: 0 16px 40px; }
+    .hero { padding: 16px 16px 8px; }
   }
+
   .card {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 20px;
+    padding: 22px;
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s ease;
+    will-change: transform;
+    opacity: 0;
+    animation: fade-up 0.5s ease forwards;
   }
+  .card:nth-of-type(2) { animation-delay: 0.1s; }
+  .card:hover { box-shadow: var(--shadow); }
+
   .card h2 {
-    font-size: 15px;
+    font-size: 13.5px;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
     color: var(--muted);
-    margin: 0 0 14px;
+    margin: 0 0 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
+
   label {
     display: block;
     font-size: 13px;
@@ -72,76 +280,152 @@
     margin: 14px 0 5px;
   }
   label:first-of-type { margin-top: 0; }
+
   input[type="text"], input[type="file"], select, textarea {
     width: 100%;
-    padding: 9px 10px;
+    padding: 10px 11px;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     font-size: 14px;
     font-family: inherit;
-    background: #fff;
+    background: var(--card-solid);
     color: var(--text);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
   }
   textarea { resize: vertical; min-height: 56px; }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
   button {
-    margin-top: 18px;
+    margin-top: 20px;
     width: 100%;
-    padding: 11px 16px;
+    padding: 12px 16px;
     border: none;
-    border-radius: 8px;
-    background: var(--primary);
+    border-radius: var(--radius-sm);
+    background: linear-gradient(120deg, var(--primary), var(--primary-2));
+    background-size: 160% 160%;
     color: #fff;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 14.5px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
     cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background-position 0.4s ease;
+    box-shadow: 0 10px 24px -10px rgba(99, 102, 241, 0.6);
   }
-  button:hover { background: var(--primary-dark); }
-  button:disabled { background: #a7a9b8; cursor: not-allowed; }
+  button:hover:not(:disabled) {
+    transform: translateY(-1px) scale(1.01);
+    background-position: 100% 0;
+  }
+  button:active:not(:disabled) { transform: translateY(0) scale(0.99); }
+  button:disabled { background: #a7a9b8; box-shadow: none; cursor: not-allowed; }
+
   .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
   #status {
     margin-top: 12px;
     font-size: 13px;
     display: none;
+    align-items: center;
+    gap: 8px;
   }
-  #status.visible { display: block; }
+  #status.visible { display: flex; }
   #status.error { color: var(--error); }
   #status.loading { color: var(--muted); }
-  .result-card {
-    min-height: 420px;
-    display: flex;
-    flex-direction: column;
-  }
-  .result-card h2 { display: flex; justify-content: space-between; align-items: center; }
+
+  .result-card { min-height: 460px; display: flex; flex-direction: column; }
+
   #result {
-    white-space: pre-wrap;
-    font-size: 14px;
-    line-height: 1.6;
+    font-size: 14.5px;
+    line-height: 1.65;
     overflow-wrap: break-word;
   }
   #result:empty::before {
     content: "Upload a dataset and run the analysis to see the full report here: dataset audit, KPIs, trends, anomalies, root causes, dashboard design, and prioritized recommendations.";
     color: var(--muted);
   }
-  #result .heading { font-weight: 700; display: block; margin: 18px 0 6px; }
-  #result .heading:first-child { margin-top: 0; }
+  #result .md-h1, #result .md-h2 { font-size: 17px; font-weight: 800; margin: 20px 0 8px; letter-spacing: -0.01em; }
+  #result .md-h1:first-child, #result .md-h2:first-child { margin-top: 0; }
+  #result .md-h3, #result .md-h4, #result .md-h5, #result .md-h6 { font-size: 14.5px; font-weight: 700; margin: 16px 0 6px; color: var(--muted); }
+  #result .md-p { margin: 0 0 10px; }
+  #result .md-ul { margin: 0 0 10px; padding-left: 20px; }
+  #result .md-ul li { margin: 2px 0; }
+  #result .md-space { height: 4px; }
+  #result code {
+    background: rgba(99, 102, 241, 0.12);
+    padding: 1px 5px;
+    border-radius: 5px;
+    font-size: 13px;
+  }
+
   .spinner {
-    width: 16px; height: 16px; border-radius: 50%;
+    width: 15px; height: 15px; border-radius: 50%;
     border: 2px solid var(--border); border-top-color: var(--primary);
-    display: inline-block; vertical-align: -3px; margin-right: 6px;
+    display: inline-block;
     animation: spin 0.8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  footer {
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 8px 24px 32px;
+    font-size: 12.5px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>DataMind</h1>
-  <p>Upload a dataset and get a full decision-ready analysis: data audit, KPIs, trends, anomalies, root causes, dashboard design, and prioritized recommendations.</p>
-</header>
+
+<div class="hero">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+
+  <nav class="nav">
+    <span class="logo-mark"></span>
+    <span class="nav-title">DataMind</span>
+  </nav>
+
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <h1>Turn any dataset into a <span>decision-ready dashboard</span></h1>
+      <p>Upload a dataset and get a full analyst-grade report: data quality audit, KPI discovery, trend and anomaly detection, root-cause analysis, dashboard design, and prioritized recommendations — powered by Claude.</p>
+      <div class="chips">
+        <span class="chip">Data quality audit</span>
+        <span class="chip">KPI discovery</span>
+        <span class="chip">Root-cause analysis</span>
+        <span class="chip">Executive summary</span>
+      </div>
+    </div>
+    <div class="cube-stage" aria-hidden="true">
+      <div class="cube">
+        <div class="face front"></div>
+        <div class="face back"></div>
+        <div class="face right"></div>
+        <div class="face left"></div>
+        <div class="face top"></div>
+        <div class="face bottom"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <main>
-  <section class="card">
+  <section class="card" id="config-card">
     <h2>Configuration</h2>
     <form id="analyze-form">
       <label for="file">Dataset (CSV, TSV, or JSON)</label>
@@ -227,11 +511,13 @@
     </form>
   </section>
 
-  <section class="card result-card">
+  <section class="card result-card" id="result-card">
     <h2>Analysis</h2>
     <div id="result"></div>
   </section>
 </main>
+
+<footer>DataMind — analysis generated by Claude. Nothing is stored server-side beyond the request lifetime.</footer>
 
 <script>
   const form = document.getElementById("analyze-form");
@@ -239,26 +525,53 @@
   const resultEl = document.getElementById("result");
   const submitBtn = document.getElementById("submit-btn");
 
-  function setStatus(message, kind) {
-    statusEl.textContent = message || "";
+  function setStatus(message, kind, spinning) {
+    statusEl.innerHTML = "";
+    if (spinning) {
+      const s = document.createElement("span");
+      s.className = "spinner";
+      statusEl.appendChild(s);
+    }
+    statusEl.appendChild(document.createTextNode(message || ""));
     statusEl.className = message ? `visible ${kind || ""}` : "";
   }
 
-  function renderResult(text) {
-    resultEl.innerHTML = "";
-    const lines = text.split("\n");
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function inlineFormat(s) {
+    return s
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/`([^`]+?)`/g, "<code>$1</code>");
+  }
+
+  function renderMarkdownLite(text) {
+    const lines = escapeHtml(text).split("\n");
+    let html = "";
+    let inList = false;
     for (const line of lines) {
-      const headingMatch = line.match(/^#{1,6}\s+(.*)/);
-      const el = document.createElement(headingMatch ? "span" : "span");
-      if (headingMatch) {
-        el.className = "heading";
-        el.textContent = headingMatch[1];
+      const heading = line.match(/^(#{1,6})\s+(.*)/);
+      const item = line.match(/^[-*]\s+(.*)/);
+      if (heading) {
+        if (inList) { html += "</ul>"; inList = false; }
+        html += `<div class="md-h${heading[1].length}">${inlineFormat(heading[2])}</div>`;
+      } else if (item) {
+        if (!inList) { html += '<ul class="md-ul">'; inList = true; }
+        html += `<li>${inlineFormat(item[1])}</li>`;
+      } else if (line.trim() === "") {
+        if (inList) { html += "</ul>"; inList = false; }
+        html += '<div class="md-space"></div>';
       } else {
-        el.textContent = line;
+        if (inList) { html += "</ul>"; inList = false; }
+        html += `<p class="md-p">${inlineFormat(line)}</p>`;
       }
-      resultEl.appendChild(el);
-      resultEl.appendChild(document.createTextNode("\n"));
     }
+    if (inList) html += "</ul>";
+    return html;
   }
 
   function readFileAsText(file) {
@@ -278,8 +591,8 @@
     if (!file) return;
 
     submitBtn.disabled = true;
-    setStatus("Running analysis — this can take up to a minute…", "loading");
-    resultEl.textContent = "";
+    setStatus("Running analysis — this can take up to a minute…", "loading", true);
+    resultEl.innerHTML = "";
 
     try {
       const content = await readFileAsText(file);
@@ -309,14 +622,32 @@
         throw new Error(data.error || `Request failed with status ${response.status}`);
       }
 
-      renderResult(data.result);
-      setStatus("Done.", "");
+      resultEl.innerHTML = renderMarkdownLite(data.result);
+      setStatus("Done.", "", false);
     } catch (err) {
-      setStatus(err.message || "Something went wrong.", "error");
+      setStatus(err.message || "Something went wrong.", "error", false);
     } finally {
       submitBtn.disabled = false;
     }
   });
+
+  // Subtle 3D tilt on the cards for pointer devices, respecting reduced-motion preference.
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const supportsHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+
+  if (!prefersReducedMotion && supportsHover) {
+    document.querySelectorAll(".card").forEach((card) => {
+      card.addEventListener("mousemove", (e) => {
+        const rect = card.getBoundingClientRect();
+        const px = (e.clientX - rect.left) / rect.width - 0.5;
+        const py = (e.clientY - rect.top) / rect.height - 0.5;
+        card.style.transform = `perspective(1000px) rotateX(${(-py * 2.2).toFixed(2)}deg) rotateY(${(px * 2.2).toFixed(2)}deg)`;
+      });
+      card.addEventListener("mouseleave", () => {
+        card.style.transform = "";
+      });
+    });
+  }
 </script>
 </body>
 </html>
