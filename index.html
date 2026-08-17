@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DataMind — AI Data Analyst</title>
+<style>
+  :root {
+    --bg: #f5f6fa;
+    --card: #ffffff;
+    --border: #e2e4ec;
+    --text: #14161f;
+    --muted: #5c6070;
+    --primary: #4f46e5;
+    --primary-dark: #4338ca;
+    --success: #10b981;
+    --error: #dc2626;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+  }
+  header {
+    padding: 28px 24px 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  header h1 {
+    margin: 0 0 4px;
+    font-size: 26px;
+    letter-spacing: -0.02em;
+  }
+  header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px 48px;
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; }
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .card h2 {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    margin: 0 0 14px;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin: 14px 0 5px;
+  }
+  label:first-of-type { margin-top: 0; }
+  input[type="text"], input[type="file"], select, textarea {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fff;
+    color: var(--text);
+  }
+  textarea { resize: vertical; min-height: 56px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  button {
+    margin-top: 18px;
+    width: 100%;
+    padding: 11px 16px;
+    border: none;
+    border-radius: 8px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { background: var(--primary-dark); }
+  button:disabled { background: #a7a9b8; cursor: not-allowed; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  #status {
+    margin-top: 12px;
+    font-size: 13px;
+    display: none;
+  }
+  #status.visible { display: block; }
+  #status.error { color: var(--error); }
+  #status.loading { color: var(--muted); }
+  .result-card {
+    min-height: 420px;
+    display: flex;
+    flex-direction: column;
+  }
+  .result-card h2 { display: flex; justify-content: space-between; align-items: center; }
+  #result {
+    white-space: pre-wrap;
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-wrap: break-word;
+  }
+  #result:empty::before {
+    content: "Upload a dataset and run the analysis to see the full report here: dataset audit, KPIs, trends, anomalies, root causes, dashboard design, and prioritized recommendations.";
+    color: var(--muted);
+  }
+  #result .heading { font-weight: 700; display: block; margin: 18px 0 6px; }
+  #result .heading:first-child { margin-top: 0; }
+  .spinner {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid var(--border); border-top-color: var(--primary);
+    display: inline-block; vertical-align: -3px; margin-right: 6px;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>DataMind</h1>
+  <p>Upload a dataset and get a full decision-ready analysis: data audit, KPIs, trends, anomalies, root causes, dashboard design, and prioritized recommendations.</p>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Configuration</h2>
+    <form id="analyze-form">
+      <label for="file">Dataset (CSV, TSV, or JSON)</label>
+      <input type="file" id="file" accept=".csv,.tsv,.json" required />
+      <p class="hint">Excel files are supported via the Python CLI (<code>datamind</code>), not this web form.</p>
+
+      <div class="row">
+        <div>
+          <label for="tool">Preferred tool</label>
+          <select id="tool">
+            <option>Python</option>
+            <option>Excel</option>
+            <option>Power BI</option>
+            <option>Google Sheets</option>
+            <option>Tableau</option>
+            <option>Looker Studio</option>
+            <option>SQL + BI Tool</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div>
+          <label for="depth">Analysis depth</label>
+          <select id="depth">
+            <option>Standard Analysis</option>
+            <option>Quick Analysis</option>
+            <option>Deep Dive</option>
+            <option>Executive Mode</option>
+            <option>Data Analyst Mode</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="objective">Dashboard objective</label>
+          <select id="objective">
+            <option value="">Auto-detect</option>
+            <option>Executive Overview</option>
+            <option>Sales Analysis</option>
+            <option>Marketing Analysis</option>
+            <option>Financial Analysis</option>
+            <option>Customer Analysis</option>
+            <option>E-Commerce Analysis</option>
+            <option>Social Media Analysis</option>
+            <option>Operations Analysis</option>
+            <option>HR Analysis</option>
+            <option>Product Analysis</option>
+            <option>Forecasting</option>
+            <option>Performance Monitoring</option>
+            <option>Custom</option>
+          </select>
+        </div>
+        <div>
+          <label for="audience">Target audience</label>
+          <select id="audience">
+            <option value="">Not specified</option>
+            <option>CEO</option>
+            <option>Management</option>
+            <option>Finance</option>
+            <option>Marketing</option>
+            <option>Sales</option>
+            <option>Operations</option>
+            <option>Analysts</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+
+      <label for="context">Business context</label>
+      <textarea id="context" placeholder="e.g. Q1 retail performance review across three regions"></textarea>
+
+      <label for="questions">Business questions</label>
+      <textarea id="questions" placeholder="e.g. Why did margin drop in February?"></textarea>
+
+      <label for="style">Brand colors / dashboard style</label>
+      <input type="text" id="style" placeholder="e.g. Modern, navy and teal" />
+
+      <label for="question">Specific question (optional)</label>
+      <textarea id="question" placeholder="Ask something specific about this dataset"></textarea>
+
+      <button type="submit" id="submit-btn">Run analysis</button>
+      <div id="status"></div>
+    </form>
+  </section>
+
+  <section class="card result-card">
+    <h2>Analysis</h2>
+    <div id="result"></div>
+  </section>
+</main>
+
+<script>
+  const form = document.getElementById("analyze-form");
+  const statusEl = document.getElementById("status");
+  const resultEl = document.getElementById("result");
+  const submitBtn = document.getElementById("submit-btn");
+
+  function setStatus(message, kind) {
+    statusEl.textContent = message || "";
+    statusEl.className = message ? `visible ${kind || ""}` : "";
+  }
+
+  function renderResult(text) {
+    resultEl.innerHTML = "";
+    const lines = text.split("\n");
+    for (const line of lines) {
+      const headingMatch = line.match(/^#{1,6}\s+(.*)/);
+      const el = document.createElement(headingMatch ? "span" : "span");
+      if (headingMatch) {
+        el.className = "heading";
+        el.textContent = headingMatch[1];
+      } else {
+        el.textContent = line;
+      }
+      resultEl.appendChild(el);
+      resultEl.appendChild(document.createTextNode("\n"));
+    }
+  }
+
+  function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsText(file);
+    });
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const fileInput = document.getElementById("file");
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    submitBtn.disabled = true;
+    setStatus("Running analysis — this can take up to a minute…", "loading");
+    resultEl.textContent = "";
+
+    try {
+      const content = await readFileAsText(file);
+
+      const payload = {
+        filename: file.name,
+        content,
+        tool: document.getElementById("tool").value,
+        depth: document.getElementById("depth").value,
+        objective: document.getElementById("objective").value || null,
+        audience: document.getElementById("audience").value || null,
+        context: document.getElementById("context").value || null,
+        questions: document.getElementById("questions").value || null,
+        style: document.getElementById("style").value || null,
+        question: document.getElementById("question").value || null,
+      };
+
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `Request failed with status ${response.status}`);
+      }
+
+      renderResult(data.result);
+      setStatus("Done.", "");
+    } catch (err) {
+      setStatus(err.message || "Something went wrong.", "error");
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
