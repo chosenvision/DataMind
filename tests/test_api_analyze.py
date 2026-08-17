@@ -1,7 +1,10 @@
+import base64
 import io
 import json
 import os
 from unittest.mock import patch
+
+import openpyxl
 
 from api import analyze as analyze_mod
 
@@ -63,11 +66,33 @@ def test_invalid_config_value_returns_400():
     assert "preferred_tool" in data["error"]
 
 
-def test_happy_path_returns_analysis_result():
+_MOCK_PLAN = {
+    "dataset_classification": "Test",
+    "executive_summary": "Column a totals 3 across two rows.",
+    "kpis": [{"name": "Total A", "column": "a", "agg": "sum", "format": "number"}],
+    "charts": [{"title": "A by B", "type": "bar", "category_column": "b", "value_column": "a", "agg": "sum"}],
+    "insights_text": ["a is small but consistent."],
+    "risks": [],
+    "opportunities": [],
+    "recommendations": [],
+    "assumptions": [],
+    "limitations": [],
+}
+
+
+def test_happy_path_returns_summary_and_workbook():
     with patch.dict(os.environ, {"GEMINI_API_KEY": "fake-key"}):
-        with patch.object(analyze_mod.DataAnalystAgent, "analyze", return_value="MOCK RESULT"):
+        with patch.object(analyze_mod.DataAnalystAgent, "plan_dashboard", return_value=_MOCK_PLAN):
             status, data = _post(
-                {"content": "a,b\n1,2\n", "filename": "x.csv", "depth": "Quick Analysis"}
+                {"content": "a,b\n1,x\n2,y\n", "filename": "sales.csv", "depth": "Quick Analysis"}
             )
+
     assert status == 200
-    assert data["result"] == "MOCK RESULT"
+    assert data["workbook_filename"] == "sales_dashboard.xlsx"
+    assert data["summary"]["dataset_classification"] == "Test"
+    assert data["summary"]["kpis"] == [{"name": "Total A", "value": "3", "meaning": ""}]
+
+    workbook_bytes = base64.b64decode(data["workbook_base64"])
+    wb = openpyxl.load_workbook(io.BytesIO(workbook_bytes))
+    assert "Overview" in wb.sheetnames
+    assert "Data" in wb.sheetnames

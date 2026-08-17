@@ -41,7 +41,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--question", default=None, help="A specific ad-hoc question to answer")
     parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--max-tokens", type=int, default=8192)
-    parser.add_argument("--output", default=None, help="Write the response to this file instead of stdout")
+    parser.add_argument("--output", default=None, help="Write the narrative report to this file instead of stdout")
+    parser.add_argument(
+        "--output-xlsx",
+        default=None,
+        help=(
+            "Write a real Excel dashboard (computed KPIs, native charts, cleaned "
+            "data table, Power BI/DAX guide) to this path instead of the narrative report"
+        ),
+    )
     return parser
 
 
@@ -61,6 +69,22 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     agent = DataAnalystAgent(model=args.model)
+
+    if args.output_xlsx:
+        from datamind.dashboard import build_workbook, load_dataframe
+
+        plan = agent.plan_dashboard(
+            dataset_path=args.dataset,
+            config=config,
+            question=args.question,
+            max_tokens=args.max_tokens,
+        )
+        df = load_dataframe(args.dataset)
+        workbook = build_workbook(df, plan)
+        workbook.save(args.output_xlsx)
+        print(f"Wrote Excel dashboard to {args.output_xlsx}")
+        return 0
+
     result = agent.analyze(
         dataset_path=args.dataset,
         config=config,

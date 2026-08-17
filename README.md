@@ -1,11 +1,14 @@
 # DataMind
 
-DataMind turns a raw dataset into a decision-making system, not just a pile of
-charts. It packages an **Advanced AI Data Analyst, Senior BI Developer, Data
+DataMind turns a raw dataset into a real, downloadable **Excel dashboard** —
+computed KPIs, native charts, a clean data table, and a Power BI/DAX guide —
+plus a short plain-language summary of what's happening and what to do next.
+It packages an **Advanced AI Data Analyst, Senior BI Developer, Data
 Visualization Expert, and Dashboard UX/UI Designer** persona as a reusable
-system prompt, profiles your dataset deterministically with pandas, and sends
-both to Gemini to produce a full dataset audit, KPI set, EDA, trend/anomaly/
-root-cause analysis, dashboard design, and prioritized recommendations.
+system prompt, profiles your dataset deterministically with pandas, and uses
+Gemini to decide *which* KPIs/charts/insights matter for this dataset — but
+every number in the output is computed by pandas against your actual data,
+never taken verbatim from the model.
 
 Uses the Gemini API (rather than a paid-only provider) so a free Google AI
 Studio API key is enough to run this end to end, no billing setup required.
@@ -15,16 +18,31 @@ Studio API key is enough to run this end to end, no billing setup required.
 1. `datamind/prompts/data_analyst_role.md` defines the full analyst role and
    44-phase workflow (data audit, cleaning, KPI discovery, trend/anomaly/
    root-cause analysis, forecasting, dashboard architecture, UI/UX design,
-   documentation, presentation talking points, stakeholder Q&A, ...). This is
-   used verbatim as the model's system prompt.
+   documentation, ...). This is used verbatim as the model's system
+   instruction.
 2. `datamind/profiler.py` loads your dataset (CSV/TSV/JSON/Excel) and computes
    shape, dtypes, missingness, duplicates, and per-column statistics with
    pandas. This gives the model verified ground-truth facts instead of asking
    it to eyeball numbers from a raw preview.
-3. `datamind/agent.py` combines the role prompt, your configuration (preferred
-   tool, analysis depth, dashboard objective, business context, target
-   audience, brand style), and the dataset profile into a single request to
-   the Gemini API, and returns the full analysis.
+3. `datamind/agent.py`'s `plan_dashboard()` sends the role prompt + dataset
+   profile + your configuration to Gemini and gets back a compact JSON plan:
+   which KPIs to show (column + aggregation, e.g. `sum(revenue)`), which
+   charts to build (category/date column + value column), and short
+   plain-language insights/risks/opportunities/recommendations. Column names
+   in the plan are validated against the real dataset — anything that doesn't
+   match an actual column is dropped rather than guessed at.
+4. `datamind/dashboard.py` takes that plan and the real dataframe and computes
+   every KPI and chart value with pandas, then builds a multi-sheet Excel
+   workbook with `openpyxl`: an **Overview** sheet (KPI cards, executive
+   summary, insights/risks/opportunities, prioritized recommendations), a
+   **Dashboard** sheet with native Excel bar/line charts, a **Data** sheet
+   (the full dataset as a real Excel Table), a **Power BI Guide** sheet
+   (import steps + suggested DAX measures generated from the same KPI specs),
+   and an **Assumptions & Limitations** sheet.
+5. The web UI and CLI both also render/print a compact on-screen summary
+   (KPI cards, insights, recommendations) alongside the downloadable
+   workbook — `agent.analyze()` is still available if you want the full
+   28-section narrative report as plain text instead.
 
 ## Setup
 
@@ -38,13 +56,20 @@ Get a free API key from [Google AI Studio](https://aistudio.google.com/apikey)
 
 ## CLI usage
 
+**Excel dashboard** (the primary output — computed KPIs, native charts, data table, Power BI guide):
+
 ```bash
 datamind sample_data/sample_sales.csv \
-  --tool Python \
-  --depth "Standard Analysis" \
+  --tool Excel \
   --objective "Sales Analysis" \
   --audience CEO \
-  --output analysis.md
+  --output-xlsx dashboard.xlsx
+```
+
+**Full narrative report** (the role's 28-section text deliverable, if you want that instead):
+
+```bash
+datamind sample_data/sample_sales.csv --depth "Standard Analysis" --output analysis.md
 ```
 
 Run `datamind --help` for all options (business context, business questions,
@@ -54,7 +79,7 @@ override, max tokens).
 ## Library usage
 
 ```python
-from datamind import DataAnalystAgent, UserConfig
+from datamind import DataAnalystAgent, UserConfig, build_workbook, load_dataframe
 
 agent = DataAnalystAgent()
 config = UserConfig(
@@ -63,8 +88,16 @@ config = UserConfig(
     dashboard_objective="Sales Analysis",
     target_audience="CEO",
 )
-result = agent.analyze("sample_data/sample_sales.csv", config=config)
-print(result)
+
+# Real Excel dashboard: KPIs and charts computed from the actual data
+plan = agent.plan_dashboard("sample_data/sample_sales.csv", config=config)
+df = load_dataframe("sample_data/sample_sales.csv")
+workbook = build_workbook(df, plan)
+workbook.save("dashboard.xlsx")
+
+# Or the full narrative report as plain text
+report = agent.analyze("sample_data/sample_sales.csv", config=config)
+print(report)
 ```
 
 ## Sample data
@@ -79,15 +112,20 @@ before pointing it at your own data.
 pytest
 ```
 
-Tests cover the deterministic dataset profiler, configuration validation, and
-the `/api/analyze` request/response handling (with the Gemini call mocked);
-they do not call the Gemini API.
+Tests cover the deterministic dataset profiler, configuration validation, the
+KPI/chart computation and Excel workbook building in `datamind/dashboard.py`
+(against the real sample dataset, no mocking needed since it's pure pandas),
+and the `/api/analyze` request/response handling (with the Gemini call
+mocked). They do not call the Gemini API.
 
 ## Web app / Vercel deployment
 
 The same agent is exposed as a web app: a static UI at `index.html` and a
 Python serverless function at `api/analyze.py` (plus `api/health.py` for a
-readiness check). Vercel auto-detects the `api/*.py` files as serverless
+readiness check). `POST /api/analyze` returns a compact JSON `summary` (for
+the on-page KPI cards/insights) plus a base64-encoded `workbook_base64` — the
+full Excel dashboard — which the browser decodes into a `Blob` and offers as
+a one-click download. Vercel auto-detects the `api/*.py` files as serverless
 functions and serves everything else as static assets — no framework or
 build step needed.
 
@@ -117,12 +155,16 @@ vercel dev
 
 - The Python runtime version is pinned via `.python-version` (3.12); function
   dependencies for Vercel are declared in the root `requirements.txt`
-  (separate from `pyproject.toml`, which is for local/CLI installs and also
-  includes `openpyxl` for Excel support that the CLI has but the web form
-  does not).
-- The web form accepts CSV/TSV/JSON only, read client-side as text and posted
-  as JSON to `/api/analyze`. Excel files are only supported via the
-  `datamind` CLI/library.
+  (separate from `pyproject.toml`, which is for local/CLI installs).
+- The web form accepts CSV/TSV/JSON as *input* only, read client-side as text
+  and posted as JSON to `/api/analyze`. Excel files as input are only
+  supported via the `datamind` CLI/library. The *output* is always a real
+  `.xlsx` workbook regardless of input format.
+- There's no reliable way to generate a real `.pbix` (Power BI's binary
+  project format) from Python, so "Power BI" support means: import the
+  `Data` sheet of the generated workbook into Power BI Desktop, then use the
+  `Power BI Guide` sheet's ready-made DAX measures and chart-recreation
+  steps — not a literal `.pbix` file.
 - `vercel.json` sets `maxDuration: 60` for the API functions, since an LLM
   analysis call can take longer than the platform's 10s default. Hobby plans
   cap function duration at 60s; for `Deep Dive` analyses on large datasets you
@@ -137,7 +179,7 @@ vercel dev
 ## Project layout
 
 ```
-index.html                       # static web UI (upload dataset, configure, run analysis)
+index.html                       # static web UI (upload dataset, configure, run analysis, download xlsx)
 api/
   analyze.py                     # POST /api/analyze - Vercel Python serverless function
   health.py                      # GET /api/health - readiness check
@@ -149,7 +191,8 @@ datamind/
   role.py                        # loads the role prompt
   config.py                      # UserConfig: tool, depth, objective, context
   profiler.py                    # deterministic dataset profiling (pandas)
-  agent.py                       # DataAnalystAgent: wires prompt + profile -> Gemini
+  agent.py                       # DataAnalystAgent: plan_dashboard() (JSON plan) + analyze() (narrative)
+  dashboard.py                   # computes KPIs/charts with pandas, builds the Excel workbook (openpyxl)
   cli.py                         # `datamind` command-line entry point
 sample_data/sample_sales.csv
 tests/

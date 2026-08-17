@@ -359,6 +359,22 @@
 
   .result-card { min-height: 460px; display: flex; flex-direction: column; }
 
+  .download-btn {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 6px 13px;
+    width: auto;
+    font-size: 12.5px;
+    border-radius: 999px;
+    background: linear-gradient(120deg, var(--accent), var(--primary));
+    box-shadow: none;
+  }
+  .download-btn.visible { display: inline-flex; }
+  .download-btn:hover:not(:disabled) { transform: none; }
+  .download-btn svg { width: 13px; height: 13px; flex: none; }
+
   #result {
     font-size: 14.5px;
     line-height: 1.65;
@@ -385,32 +401,111 @@
     border: 1.5px solid transparent;
   }
   #result:empty::after {
-    content: "Upload a dataset and run the analysis to see the full report here: dataset audit, KPIs, trends, anomalies, root causes, dashboard design, and prioritized recommendations.";
+    content: "Upload a dataset and run the analysis to see KPIs, charts, plain-language insights, and a downloadable Excel dashboard here.";
     color: var(--muted);
     max-width: 360px;
   }
-  #result .md-h1, #result .md-h2 {
-    font-size: 17px;
+
+  .result-badge {
+    display: inline-block;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(67, 56, 202, 0.12);
+    color: var(--primary);
+    margin-bottom: 10px;
+  }
+  .result-summary {
+    margin: 0 0 20px;
+    font-size: 15px;
+    color: var(--text);
+  }
+
+  .result-section-title {
+    font-size: 12px;
     font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
     margin: 22px 0 10px;
-    padding-left: 11px;
-    border-left: 3px solid var(--primary);
-    letter-spacing: -0.01em;
   }
-  #result .md-h1:first-child, #result .md-h2:first-child { margin-top: 0; }
-  #result .md-h3, #result .md-h4, #result .md-h5, #result .md-h6 { font-size: 14.5px; font-weight: 700; margin: 16px 0 6px; color: var(--muted); }
-  #result .md-p { margin: 0 0 10px; }
-  #result .md-ul { margin: 0 0 10px; padding-left: 20px; }
-  #result .md-ul li { margin: 2px 0; }
-  #result .md-space { height: 4px; }
-  #result strong { color: var(--primary); }
-  #result code {
-    background: rgba(13, 148, 136, 0.14);
-    color: var(--accent);
-    padding: 1px 5px;
-    border-radius: 5px;
-    font-size: 13px;
+  .result-section-title:first-child { margin-top: 0; }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 6px;
   }
+  .kpi-card {
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--kpi-color, var(--primary));
+    border-radius: var(--radius-sm);
+    padding: 12px 13px;
+    background: var(--card-solid);
+  }
+  .kpi-card:nth-child(4n+1) { --kpi-color: var(--primary); }
+  .kpi-card:nth-child(4n+2) { --kpi-color: var(--accent); }
+  .kpi-card:nth-child(4n+3) { --kpi-color: var(--warm); }
+  .kpi-card:nth-child(4n+4) { --kpi-color: var(--primary-2); }
+  .kpi-name {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .kpi-value { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+  .kpi-meaning { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+
+  .bullet-list { margin: 0; padding: 0; list-style: none; }
+  .bullet-list li {
+    position: relative;
+    padding: 3px 0 3px 18px;
+    font-size: 14px;
+  }
+  .bullet-list li::before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 12px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--primary);
+  }
+  .bullet-risk li::before { background: var(--error); }
+  .bullet-opportunity li::before { background: var(--accent); }
+
+  .rec-list { display: flex; flex-direction: column; gap: 8px; }
+  .rec-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+  }
+  .rec-priority {
+    flex: none;
+    font-size: 10.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 3px 8px;
+    border-radius: 999px;
+    color: #fff;
+    background: var(--muted);
+  }
+  .rec-priority-high { background: var(--error); }
+  .rec-priority-medium { background: var(--warm); }
+  .rec-priority-low { background: var(--accent); }
+  .rec-action { font-size: 13.5px; font-weight: 600; }
+  .rec-impact { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
 
   .spinner {
     width: 15px; height: 15px; border-radius: 50%;
@@ -458,12 +553,12 @@
   <div class="hero-inner">
     <div class="hero-copy">
       <h1>Turn any dataset into a <span>decision-ready dashboard</span></h1>
-      <p>Upload a dataset and get a full analyst-grade report: data quality audit, KPI discovery, trend and anomaly detection, root-cause analysis, dashboard design, and prioritized recommendations — powered by Gemini.</p>
+      <p>Upload a dataset and get a real, downloadable Excel dashboard — computed KPIs, native charts, a clean data table, and a Power BI/DAX guide — plus a plain-language summary of what's happening and what to do next, powered by Gemini.</p>
       <div class="chips">
-        <span class="chip">Data quality audit</span>
-        <span class="chip">KPI discovery</span>
-        <span class="chip">Root-cause analysis</span>
-        <span class="chip">Executive summary</span>
+        <span class="chip">Real Excel dashboard</span>
+        <span class="chip">Native charts</span>
+        <span class="chip">Power BI / DAX guide</span>
+        <span class="chip">Plain-language insights</span>
       </div>
     </div>
     <div class="cube-stage" aria-hidden="true">
@@ -567,7 +662,15 @@
   </section>
 
   <section class="card result-card" id="result-card">
-    <h2>Analysis</h2>
+    <h2>
+      Analysis
+      <button type="button" class="download-btn" id="download-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16" />
+        </svg>
+        Download Excel dashboard
+      </button>
+    </h2>
     <div id="result"></div>
   </section>
 </main>
@@ -579,6 +682,9 @@
   const statusEl = document.getElementById("status");
   const resultEl = document.getElementById("result");
   const submitBtn = document.getElementById("submit-btn");
+  const downloadBtn = document.getElementById("download-btn");
+
+  let pendingWorkbook = null;
 
   function setStatus(message, kind, spinning) {
     statusEl.innerHTML = "";
@@ -591,43 +697,83 @@
     statusEl.className = message ? `visible ${kind || ""}` : "";
   }
 
-  function escapeHtml(str) {
-    return str
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined && text !== null) node.textContent = text;
+    return node;
   }
 
-  function inlineFormat(s) {
-    return s
-      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      .replace(/`([^`]+?)`/g, "<code>$1</code>");
+  function bulletSection(title, items, listClass) {
+    if (!items || !items.length) return;
+    resultEl.appendChild(el("div", "result-section-title", title));
+    const ul = el("ul", `bullet-list ${listClass || ""}`.trim());
+    items.forEach((text) => ul.appendChild(el("li", null, text)));
+    resultEl.appendChild(ul);
   }
 
-  function renderMarkdownLite(text) {
-    const lines = escapeHtml(text).split("\n");
-    let html = "";
-    let inList = false;
-    for (const line of lines) {
-      const heading = line.match(/^(#{1,6})\s+(.*)/);
-      const item = line.match(/^[-*]\s+(.*)/);
-      if (heading) {
-        if (inList) { html += "</ul>"; inList = false; }
-        html += `<div class="md-h${heading[1].length}">${inlineFormat(heading[2])}</div>`;
-      } else if (item) {
-        if (!inList) { html += '<ul class="md-ul">'; inList = true; }
-        html += `<li>${inlineFormat(item[1])}</li>`;
-      } else if (line.trim() === "") {
-        if (inList) { html += "</ul>"; inList = false; }
-        html += '<div class="md-space"></div>';
-      } else {
-        if (inList) { html += "</ul>"; inList = false; }
-        html += `<p class="md-p">${inlineFormat(line)}</p>`;
-      }
+  function renderSummary(summary) {
+    resultEl.innerHTML = "";
+
+    if (summary.dataset_classification) {
+      resultEl.appendChild(el("span", "result-badge", summary.dataset_classification));
     }
-    if (inList) html += "</ul>";
-    return html;
+    if (summary.executive_summary) {
+      resultEl.appendChild(el("p", "result-summary", summary.executive_summary));
+    }
+
+    if (summary.kpis && summary.kpis.length) {
+      const grid = el("div", "kpi-grid");
+      summary.kpis.forEach((kpi) => {
+        const card = el("div", "kpi-card");
+        card.appendChild(el("div", "kpi-name", kpi.name));
+        card.appendChild(el("div", "kpi-value", kpi.value));
+        if (kpi.meaning) card.appendChild(el("div", "kpi-meaning", kpi.meaning));
+        grid.appendChild(card);
+      });
+      resultEl.appendChild(grid);
+    }
+
+    bulletSection("Key Insights", summary.insights_text);
+    bulletSection("Risks", summary.risks, "bullet-risk");
+    bulletSection("Opportunities", summary.opportunities, "bullet-opportunity");
+
+    if (summary.recommendations && summary.recommendations.length) {
+      resultEl.appendChild(el("div", "result-section-title", "Recommendations"));
+      const list = el("div", "rec-list");
+      summary.recommendations.forEach((rec) => {
+        const row = el("div", "rec-row");
+        const priority = (rec.priority || "").toLowerCase();
+        row.appendChild(el("span", `rec-priority rec-priority-${priority}`, rec.priority || ""));
+        const body = el("div", "rec-body");
+        body.appendChild(el("div", "rec-action", rec.action || ""));
+        if (rec.impact) body.appendChild(el("div", "rec-impact", rec.impact));
+        row.appendChild(body);
+        list.appendChild(row);
+      });
+      resultEl.appendChild(list);
+    }
   }
+
+  function downloadWorkbook() {
+    if (!pendingWorkbook) return;
+    const binary = atob(pendingWorkbook.base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = pendingWorkbook.filename || "dashboard.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  downloadBtn.addEventListener("click", downloadWorkbook);
 
   function readFileAsText(file) {
     return new Promise((resolve, reject) => {
@@ -646,6 +792,8 @@
     if (!file) return;
 
     submitBtn.disabled = true;
+    downloadBtn.classList.remove("visible");
+    pendingWorkbook = null;
     setStatus("Running analysis — this can take up to a minute…", "loading", true);
     resultEl.innerHTML = "";
 
@@ -677,7 +825,9 @@
         throw new Error(data.error || `Request failed with status ${response.status}`);
       }
 
-      resultEl.innerHTML = renderMarkdownLite(data.result);
+      renderSummary(data.summary || {});
+      pendingWorkbook = { base64: data.workbook_base64, filename: data.workbook_filename };
+      downloadBtn.classList.add("visible");
       setStatus("Done.", "", false);
     } catch (err) {
       setStatus(err.message || "Something went wrong.", "error", false);

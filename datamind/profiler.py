@@ -9,6 +9,12 @@ MAX_PREVIEW_ROWS = 5
 _EXCEL_SUFFIXES = {".xlsx", ".xls", ".xlsm"}
 
 
+def load_dataframe(path: str | Path) -> pd.DataFrame:
+    """Load a dataset (CSV/TSV/Excel/JSON) into a DataFrame using the same format
+    detection as profile_dataset, for reuse by callers that need the raw data."""
+    return _read_any(Path(path))
+
+
 def _read_any(path: Path) -> pd.DataFrame:
     if path.suffix.lower() in _EXCEL_SUFFIXES:
         return pd.read_excel(path)
