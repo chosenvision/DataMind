@@ -7,35 +7,44 @@
 <title>DataMind — AI Data Analyst</title>
 <style>
   :root {
-    --bg: #f4f5fb;
-    --bg-2: #eceffb;
-    --card: rgba(255, 255, 255, 0.78);
+    --bg: #f6f5f2;
+    --bg-2: #ecebf5;
+    --card: rgba(255, 255, 255, 0.8);
     --card-solid: #ffffff;
-    --border: rgba(20, 22, 31, 0.09);
-    --text: #14161f;
-    --muted: #5c6070;
-    --primary: #6366f1;
-    --primary-2: #8b5cf6;
-    --accent: #06b6d4;
-    --success: #10b981;
+    --border: rgba(15, 18, 34, 0.1);
+    --text: #12131c;
+    --muted: #5a5d72;
+    --primary: #4338ca;
+    --primary-2: #7c3aed;
+    --accent: #0d9488;
+    --accent-2: #2dd4bf;
+    --warm: #d97706;
+    --success: #059669;
     --error: #dc2626;
+    --dot: rgba(15, 18, 34, 0.07);
     --radius: 18px;
     --radius-sm: 10px;
-    --shadow: 0 20px 45px -20px rgba(30, 30, 60, 0.28);
-    --shadow-sm: 0 8px 20px -10px rgba(30, 30, 60, 0.18);
+    --shadow: 0 22px 48px -20px rgba(30, 24, 60, 0.32);
+    --shadow-sm: 0 8px 20px -10px rgba(30, 24, 60, 0.16);
   }
 
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #0a0b12;
-      --bg-2: #111322;
-      --card: rgba(22, 24, 38, 0.68);
-      --card-solid: #14162350;
-      --border: rgba(255, 255, 255, 0.09);
-      --text: #eef0fb;
-      --muted: #9498ae;
-      --shadow: 0 20px 45px -20px rgba(0, 0, 0, 0.7);
-      --shadow-sm: 0 8px 20px -10px rgba(0, 0, 0, 0.6);
+      --bg: #0a0b13;
+      --bg-2: #12131f;
+      --card: rgba(22, 23, 36, 0.7);
+      --card-solid: #171826;
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #f1f1fb;
+      --muted: #9c9fb8;
+      --primary: #8b83f6;
+      --primary-2: #a78bfa;
+      --accent: #2dd4bf;
+      --accent-2: #5eead4;
+      --warm: #fbbf24;
+      --dot: rgba(255, 255, 255, 0.055);
+      --shadow: 0 22px 48px -20px rgba(0, 0, 0, 0.75);
+      --shadow-sm: 0 8px 20px -10px rgba(0, 0, 0, 0.65);
     }
   }
 
@@ -48,8 +57,10 @@
     min-height: 100vh;
     color: var(--text);
     background:
-      radial-gradient(1200px 600px at 15% -10%, rgba(99, 102, 241, 0.16), transparent 60%),
-      radial-gradient(900px 500px at 100% 0%, rgba(139, 92, 246, 0.14), transparent 55%),
+      radial-gradient(var(--dot) 1px, transparent 1px) 0 0 / 24px 24px,
+      radial-gradient(1100px 560px at 12% -12%, rgba(67, 56, 202, 0.16), transparent 62%),
+      radial-gradient(900px 520px at 102% 4%, rgba(13, 148, 136, 0.14), transparent 58%),
+      radial-gradient(700px 420px at 60% 120%, rgba(217, 119, 6, 0.08), transparent 60%),
       linear-gradient(180deg, var(--bg), var(--bg-2));
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     line-height: 1.55;
@@ -74,14 +85,10 @@
     padding: 4px 0 8px;
   }
 
-  .logo-mark {
-    width: 12px;
-    height: 12px;
-    border-radius: 4px;
-    background: linear-gradient(135deg, var(--primary), var(--accent));
-    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
-    animation: pulse 3s ease-in-out infinite;
-  }
+  .logo-mark { display: block; animation: pulse 3s ease-in-out infinite; border-radius: 6px; }
+  .logo-mark .bar-1 { fill: var(--primary); }
+  .logo-mark .bar-2 { fill: var(--accent); }
+  .logo-mark .bar-3 { fill: var(--warm); }
 
   .nav-title {
     font-weight: 700;
@@ -99,18 +106,18 @@
   }
   .blob-1 {
     width: 360px; height: 360px; top: -140px; left: -100px;
-    background: radial-gradient(circle at 30% 30%, #818cf8, transparent 70%);
+    background: radial-gradient(circle at 30% 30%, #6d5ff5, transparent 70%);
     animation: float-a 17s ease-in-out infinite alternate;
   }
   .blob-2 {
     width: 320px; height: 320px; top: -60px; right: -120px;
-    background: radial-gradient(circle at 40% 40%, #67e8f9, transparent 70%);
+    background: radial-gradient(circle at 40% 40%, #14b8a6, transparent 70%);
     animation: float-b 14s ease-in-out infinite alternate;
   }
   .blob-3 {
-    width: 280px; height: 280px; top: 160px; left: 40%;
-    background: radial-gradient(circle at 50% 50%, #c4b5fd, transparent 70%);
-    opacity: 0.35;
+    width: 300px; height: 300px; top: 170px; left: 42%;
+    background: radial-gradient(circle at 50% 50%, #f59e0b, transparent 70%);
+    opacity: 0.22;
     animation: float-a 20s ease-in-out infinite alternate-reverse;
   }
 
@@ -123,8 +130,8 @@
     to { transform: translate(-30px, 40px) scale(0.95); }
   }
   @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15); }
-    50% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0.05); }
+    0%, 100% { filter: drop-shadow(0 0 0 rgba(67, 56, 202, 0.25)); }
+    50% { filter: drop-shadow(0 0 5px rgba(67, 56, 202, 0.35)); }
   }
 
   .hero-inner {
@@ -146,7 +153,7 @@
     line-height: 1.1;
   }
   .hero-copy h1 span {
-    background: linear-gradient(120deg, var(--primary), var(--accent));
+    background: linear-gradient(100deg, var(--primary) 15%, var(--primary-2) 55%, var(--accent) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -164,9 +171,12 @@
     gap: 8px;
   }
   .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
     font-size: 12.5px;
     font-weight: 600;
-    padding: 6px 12px;
+    padding: 6px 13px 6px 11px;
     border-radius: 999px;
     background: var(--card);
     border: 1px solid var(--border);
@@ -176,10 +186,18 @@
     opacity: 0;
     animation: fade-up 0.6s ease forwards;
   }
-  .chip:nth-child(1) { animation-delay: 0.05s; }
-  .chip:nth-child(2) { animation-delay: 0.15s; }
-  .chip:nth-child(3) { animation-delay: 0.25s; }
-  .chip:nth-child(4) { animation-delay: 0.35s; }
+  .chip::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--dot-color, var(--primary));
+    flex: none;
+  }
+  .chip:nth-child(1) { animation-delay: 0.05s; --dot-color: var(--primary); }
+  .chip:nth-child(2) { animation-delay: 0.15s; --dot-color: var(--accent); }
+  .chip:nth-child(3) { animation-delay: 0.25s; --dot-color: var(--warm); }
+  .chip:nth-child(4) { animation-delay: 0.35s; --dot-color: var(--primary-2); }
 
   /* ---------- 3D cube ---------- */
 
@@ -201,17 +219,16 @@
     width: 150px;
     height: 150px;
     border: 1px solid rgba(255, 255, 255, 0.35);
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.5), rgba(139, 92, 246, 0.28));
     backdrop-filter: blur(3px);
     -webkit-backdrop-filter: blur(3px);
     border-radius: 14px;
   }
-  .face.front  { transform: translateZ(75px); }
-  .face.back   { transform: rotateY(180deg) translateZ(75px); }
-  .face.right  { transform: rotateY(90deg) translateZ(75px); }
-  .face.left   { transform: rotateY(-90deg) translateZ(75px); }
-  .face.top    { transform: rotateX(90deg) translateZ(75px); background: linear-gradient(135deg, rgba(6, 182, 212, 0.5), rgba(99, 102, 241, 0.28)); }
-  .face.bottom { transform: rotateX(-90deg) translateZ(75px); background: linear-gradient(135deg, rgba(6, 182, 212, 0.5), rgba(99, 102, 241, 0.28)); }
+  .face.front  { transform: translateZ(75px); background: linear-gradient(135deg, rgba(67, 56, 202, 0.55), rgba(124, 58, 237, 0.3)); }
+  .face.back   { transform: rotateY(180deg) translateZ(75px); background: linear-gradient(135deg, rgba(67, 56, 202, 0.55), rgba(124, 58, 237, 0.3)); }
+  .face.right  { transform: rotateY(90deg) translateZ(75px); background: linear-gradient(135deg, rgba(13, 148, 136, 0.55), rgba(45, 212, 191, 0.3)); }
+  .face.left   { transform: rotateY(-90deg) translateZ(75px); background: linear-gradient(135deg, rgba(13, 148, 136, 0.55), rgba(45, 212, 191, 0.3)); }
+  .face.top    { transform: rotateX(90deg) translateZ(75px); background: linear-gradient(135deg, rgba(217, 119, 6, 0.5), rgba(251, 191, 36, 0.28)); }
+  .face.bottom { transform: rotateX(-90deg) translateZ(75px); background: linear-gradient(135deg, rgba(217, 119, 6, 0.5), rgba(251, 191, 36, 0.28)); }
 
   @keyframes spin-cube {
     from { transform: rotateX(0deg) rotateY(0deg); }
@@ -295,7 +312,7 @@
   input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+    box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.18);
   }
   textarea { resize: vertical; min-height: 56px; }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -306,15 +323,19 @@
     padding: 12px 16px;
     border: none;
     border-radius: var(--radius-sm);
-    background: linear-gradient(120deg, var(--primary), var(--primary-2));
-    background-size: 160% 160%;
+    background: linear-gradient(120deg, var(--primary), var(--primary-2) 55%, var(--accent));
+    background-size: 180% 180%;
     color: #fff;
     font-size: 14.5px;
     font-weight: 700;
     letter-spacing: 0.01em;
     cursor: pointer;
     transition: transform 0.18s ease, box-shadow 0.18s ease, background-position 0.4s ease;
-    box-shadow: 0 10px 24px -10px rgba(99, 102, 241, 0.6);
+    box-shadow: 0 10px 24px -10px rgba(67, 56, 202, 0.55);
+  }
+  button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
   button:hover:not(:disabled) {
     transform: translateY(-1px) scale(1.01);
@@ -343,19 +364,49 @@
     line-height: 1.65;
     overflow-wrap: break-word;
   }
+  #result:empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 12px;
+    padding: 20px;
+  }
   #result:empty::before {
+    content: "";
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background:
+      linear-gradient(var(--card-solid), var(--card-solid)) padding-box,
+      linear-gradient(135deg, var(--primary), var(--accent)) border-box;
+    border: 1.5px solid transparent;
+  }
+  #result:empty::after {
     content: "Upload a dataset and run the analysis to see the full report here: dataset audit, KPIs, trends, anomalies, root causes, dashboard design, and prioritized recommendations.";
     color: var(--muted);
+    max-width: 360px;
   }
-  #result .md-h1, #result .md-h2 { font-size: 17px; font-weight: 800; margin: 20px 0 8px; letter-spacing: -0.01em; }
+  #result .md-h1, #result .md-h2 {
+    font-size: 17px;
+    font-weight: 800;
+    margin: 22px 0 10px;
+    padding-left: 11px;
+    border-left: 3px solid var(--primary);
+    letter-spacing: -0.01em;
+  }
   #result .md-h1:first-child, #result .md-h2:first-child { margin-top: 0; }
   #result .md-h3, #result .md-h4, #result .md-h5, #result .md-h6 { font-size: 14.5px; font-weight: 700; margin: 16px 0 6px; color: var(--muted); }
   #result .md-p { margin: 0 0 10px; }
   #result .md-ul { margin: 0 0 10px; padding-left: 20px; }
   #result .md-ul li { margin: 2px 0; }
   #result .md-space { height: 4px; }
+  #result strong { color: var(--primary); }
   #result code {
-    background: rgba(99, 102, 241, 0.12);
+    background: rgba(13, 148, 136, 0.14);
+    color: var(--accent);
     padding: 1px 5px;
     border-radius: 5px;
     font-size: 13px;
@@ -396,7 +447,11 @@
   <div class="blob blob-3"></div>
 
   <nav class="nav">
-    <span class="logo-mark"></span>
+    <svg class="logo-mark" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+      <rect class="bar-1" x="2" y="12" width="5" height="10" rx="1.5" />
+      <rect class="bar-2" x="9.5" y="7" width="5" height="15" rx="1.5" />
+      <rect class="bar-3" x="17" y="2" width="5" height="20" rx="1.5" />
+    </svg>
     <span class="nav-title">DataMind</span>
   </nav>
 
