@@ -156,6 +156,19 @@ def test_build_workbook_filter_dropdown_has_data_validation(df, plan):
     assert lists_ws["A1"].value == "All"
 
 
+def test_filter_dropdown_uses_defined_name_not_raw_cross_sheet_range(df, plan):
+    """Data validation lists referencing another sheet directly (formula1="Lists!$A$1:$A$8")
+    are a well-documented Excel compatibility trap - some versions/viewers silently
+    reject the cross-sheet reference and the dropdown just doesn't work. A workbook
+    defined name is the universally-supported way to back a cross-sheet dropdown."""
+    wb = build_workbook(df, plan)
+    ws = wb["Dashboard"]
+    for dv in ws.data_validations.dataValidation:
+        assert "!" not in dv.formula1  # bare defined name, not "Sheet!$A$1:$A$8"
+        assert dv.formula1 in wb.defined_names
+        assert wb.defined_names[dv.formula1].attr_text.startswith("Lists!$")
+
+
 def test_build_workbook_no_filters_uses_plain_aggregate_formula(df):
     plan = {
         "dataset_classification": "Sales",
@@ -264,6 +277,58 @@ def test_doughnut_chart_used_for_low_cardinality_positive_series(df):
     wb = build_workbook(frame, plan)
     ws = wb["Dashboard"]
     assert type(ws._charts[0]).__name__ == "DoughnutChart"
+
+
+def _spans_overlap(a, b) -> bool:
+    (a_col0, a_row0, a_col1, a_row1) = a
+    (b_col0, b_row0, b_col1, b_row1) = b
+    cols_overlap = a_col0 < b_col1 and b_col0 < a_col1
+    rows_overlap = a_row0 < b_row1 and b_row0 < a_row1
+    return cols_overlap and rows_overlap
+
+
+def test_dashboard_charts_use_grid_anchors_with_no_overlap(df, plan):
+    """Charts are placed with a TwoCellAnchor bound to exact grid cells (not a
+    single-cell anchor + a floating cm width/height, which can visually drift into a
+    neighboring chart depending on the sheet's actual column widths)."""
+    wb = build_workbook(df, plan)
+    ws = wb["Dashboard"]
+    assert len(ws._charts) == 2  # `plan` fixture has 2 valid charts (the 3rd is bogus and dropped)
+
+    spans = []
+    for chart in ws._charts:
+        anchor = chart.anchor
+        assert type(anchor).__name__ == "TwoCellAnchor"
+        spans.append((anchor._from.col, anchor._from.row, anchor.to.col, anchor.to.row))
+
+    for i in range(len(spans)):
+        for j in range(i + 1, len(spans)):
+            assert not _spans_overlap(spans[i], spans[j]), (spans[i], spans[j])
+
+
+def test_dashboard_five_charts_all_slots_no_overlap(df):
+    """Exercises every placement slot (trend top-left, doughnut top-right, 3 bottom
+    bars) at once - the scenario most likely to overlap if the grid math is wrong."""
+    plan = {
+        "dataset_classification": "Sales",
+        "filter_columns": [],
+        "kpis": [{"name": "Total Revenue", "column": "revenue", "agg": "sum", "format": "currency"}],
+        "charts": [
+            {"title": "Revenue Trend", "type": "line", "date_column": "order_date", "value_column": "revenue", "agg": "sum"},
+            {"title": "Revenue Share", "type": "doughnut", "category_column": "region", "value_column": "revenue", "agg": "sum"},
+            {"title": "Revenue by Category", "type": "bar", "category_column": "category", "value_column": "revenue", "agg": "sum"},
+            {"title": "Revenue by Product", "type": "bar", "category_column": "product", "value_column": "revenue", "agg": "sum"},
+            {"title": "Cost by Product", "type": "bar", "category_column": "product", "value_column": "cost", "agg": "sum"},
+        ],
+    }
+    wb = build_workbook(df, plan)
+    ws = wb["Dashboard"]
+    assert len(ws._charts) == 5
+
+    spans = [(c.anchor._from.col, c.anchor._from.row, c.anchor.to.col, c.anchor.to.row) for c in ws._charts]
+    for i in range(len(spans)):
+        for j in range(i + 1, len(spans)):
+            assert not _spans_overlap(spans[i], spans[j]), (spans[i], spans[j])
 
 
 # ---------------------------------------------------------------------------

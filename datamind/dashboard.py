@@ -25,8 +25,10 @@ from openpyxl import Workbook
 from openpyxl.chart import BarChart, DoughnutChart, LineChart, Reference
 from openpyxl.chart.series import DataPoint
 from openpyxl.chart.shapes import GraphicalProperties
+from openpyxl.drawing.spreadsheet_drawing import AnchorMarker, TwoCellAnchor
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.table import Table, TableStyleInfo
 
@@ -304,18 +306,35 @@ def _build_data_sheet(wb: Workbook, df: pd.DataFrame, month_columns: list[str]) 
 # ---------------------------------------------------------------------------
 
 
+def _defined_name_for(col: str, index: int) -> str:
+    """A valid, collision-free Excel defined-name for a filter's dropdown list.
+
+    Data validation lists that reference another sheet directly (formula1 pointing at
+    e.g. "Lists!$A$1:$A$8") are a well-documented Excel compatibility trap - some
+    versions/viewers silently refuse the cross-sheet reference. A workbook-scoped
+    defined name pointing at that same range is the universally supported way to back
+    a cross-sheet dropdown, so every filter gets one instead.
+    """
+    base = re.sub(r"[^A-Za-z0-9_]", "_", col).strip("_") or "Filter"
+    if not (base[0].isalpha() or base[0] == "_"):
+        base = f"_{base}"
+    return f"DM_Filter_{index}_{base}"[:200]
+
+
 def _build_lists_sheet(wb: Workbook, df: pd.DataFrame, filter_columns: list[str]) -> dict[str, str]:
     ws = wb.create_sheet("Lists")
     ws.sheet_state = "hidden"
-    ranges: dict[str, str] = {}
+    defined_names: dict[str, str] = {}
     for i, col in enumerate(filter_columns):
         letter = get_column_letter(i + 1)
         values = list(df[col].astype(str).value_counts().head(MAX_CATEGORY_ROWS).index)
         ws.cell(row=1, column=i + 1, value="All")
         for r, v in enumerate(values, start=2):
             ws.cell(row=r, column=i + 1, value=v)
-        ranges[col] = f"Lists!${letter}$1:${letter}${1 + len(values)}"
-    return ranges
+        name = _defined_name_for(col, i)
+        wb.defined_names[name] = DefinedName(name=name, attr_text=f"Lists!${letter}$1:${letter}${1 + len(values)}")
+        defined_names[col] = name
+    return defined_names
 
 
 # ---------------------------------------------------------------------------
@@ -549,13 +568,43 @@ def _write_kpi_cards(ws, kpi_rows: list[dict[str, Any]], start_row: int = 6) -> 
             cap.alignment = Alignment(wrap_text=True)
 
 
+GRID_COLS = 24  # 0-indexed Dashboard grid columns (0..23) that charts are placed within
+CHART_TOP_ROW = 10  # 0-indexed; row 11 one-indexed, below the KPI cards
+CHART_TOP_HEIGHT = 17
+CHART_ROW_GAP = 2
+
+
+def _two_cell_anchor(min_col: int, min_row: int, max_col: int, max_row: int) -> TwoCellAnchor:
+    """A chart anchor bound to an exact grid-cell range, not a floating cm size.
+
+    Two charts placed via disjoint column/row ranges can never visually overlap,
+    regardless of the sheet's actual column widths - unlike a single-cell anchor with
+    a cm width/height, which floats over the grid and can drift into a neighboring
+    chart's space depending on how wide the underlying columns happen to be.
+    """
+    return TwoCellAnchor(_from=AnchorMarker(col=min_col, row=min_row), to=AnchorMarker(col=max_col, row=max_row))
+
+
+def _split_columns(n: int, total: int = GRID_COLS, gap: int = 2) -> list[tuple[int, int]]:
+    if n <= 0:
+        return []
+    width = (total - gap * (n - 1)) // n
+    spans = []
+    start = 0
+    for _ in range(n):
+        end = start + width
+        spans.append((start, end))
+        start = end + gap
+    return spans
+
+
 def _build_dashboard_sheet(
     wb: Workbook,
     plan: dict[str, Any],
     df: pd.DataFrame,
     filter_columns: list[str],
     filter_dash_cells: dict[str, dict[str, str]],
-    lists_ranges: dict[str, str],
+    filter_dropdown_names: dict[str, str],
     calc: dict[str, Any],
     placed: dict[str, Any],
 ) -> None:
@@ -582,7 +631,7 @@ def _build_dashboard_sheet(
         value_cell = ws[cells["value_cell"]]
         value_cell.value = "All"
         value_cell.fill = _CARD_BG
-        dv = DataValidation(type="list", formula1=lists_ranges[col], allow_blank=False)
+        dv = DataValidation(type="list", formula1=filter_dropdown_names[col], allow_blank=False)
         ws.add_data_validation(dv)
         dv.add(value_cell)
 
@@ -591,25 +640,30 @@ def _build_dashboard_sheet(
     calc_ws = wb["Calc"]
     table_by_chart_id = {id(t["chart"]): t for t in calc["chart_tables"]}
 
-    def _anchor_chart(chart_obj, cell, width, height):
-        if chart_obj is None:
+    def _anchor(chart_spec, min_col, min_row, max_col, max_row):
+        if chart_spec is None:
             return
-        ws.add_chart(chart_obj, cell)
-        chart_obj.width = width
-        chart_obj.height = height
+        chart_obj = _build_chart(calc_ws, table_by_chart_id[id(chart_spec)])
+        ws.add_chart(chart_obj, anchor=_two_cell_anchor(min_col, min_row, max_col, max_row))
 
+    top_row_end = CHART_TOP_ROW + CHART_TOP_HEIGHT
     top_left = placed["top_left"]
     top_right = placed["top_right"]
-    if top_left is not None:
-        _anchor_chart(_build_chart(calc_ws, table_by_chart_id[id(top_left)]), "B11", 24, 10)
-    if top_right is not None:
-        _anchor_chart(_build_chart(calc_ws, table_by_chart_id[id(top_right)]), "R11", 16, 10)
+    top_charts = [c for c in (top_left, top_right) if c is not None]
+    if top_left is not None and top_right is not None:
+        top_spans = [(0, GRID_COLS // 2 - 1), (GRID_COLS // 2 + 1, GRID_COLS - 1)]
+    elif top_charts:
+        top_spans = [(0, GRID_COLS - 1)]
+    else:
+        top_spans = []
+    for chart_spec, (c0, c1) in zip(top_charts, top_spans):
+        _anchor(chart_spec, c0, CHART_TOP_ROW, c1, top_row_end)
 
     bottom = placed["bottom"]
-    bottom_anchors = {1: ["B29"], 2: ["B29", "N29"], 3: ["B29", "J29", "R29"]}.get(len(bottom), [])
-    bottom_width = {1: 24, 2: 17, 3: 12}.get(len(bottom), 12)
-    for chart_spec, anchor in zip(bottom, bottom_anchors):
-        _anchor_chart(_build_chart(calc_ws, table_by_chart_id[id(chart_spec)]), anchor, bottom_width, 10)
+    bottom_row_start = top_row_end + CHART_ROW_GAP
+    bottom_row_end = bottom_row_start + CHART_TOP_HEIGHT
+    for chart_spec, (c0, c1) in zip(bottom, _split_columns(len(bottom))):
+        _anchor(chart_spec, c0, bottom_row_start, c1, bottom_row_end)
 
 
 # ---------------------------------------------------------------------------
@@ -756,10 +810,10 @@ def build_workbook(df: pd.DataFrame, plan: dict[str, Any]) -> Workbook:
     wb.remove(wb.active)
 
     col_letters = _build_data_sheet(wb, df, month_columns)
-    lists_ranges = _build_lists_sheet(wb, df, filter_columns) if filter_columns else {}
+    filter_dropdown_names = _build_lists_sheet(wb, df, filter_columns) if filter_columns else {}
     filter_dash_cells = _dashboard_filter_layout(filter_columns)
     calc = _build_calc_sheet(wb, df, col_letters, filter_columns, filter_dash_cells, kpis, dashboard_charts, n_rows)
-    _build_dashboard_sheet(wb, plan, df, filter_columns, filter_dash_cells, lists_ranges, calc, placed)
+    _build_dashboard_sheet(wb, plan, df, filter_columns, filter_dash_cells, filter_dropdown_names, calc, placed)
     _build_kpi_reference_sheet(wb, plan, kpis)
     _build_powerbi_sheet(wb, plan, kpis)
     _build_notes_sheet(wb, plan)
