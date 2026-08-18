@@ -1,4 +1,5 @@
 import base64
+import binascii
 import json
 import os
 import re
@@ -14,11 +15,13 @@ from datamind.config import UserConfig  # noqa: E402
 from datamind.dashboard import build_workbook, compute_kpi_summary, load_dataframe  # noqa: E402
 
 _TEXT_SUFFIXES = {".csv", ".tsv", ".json"}
+_BINARY_SUFFIXES = {".xlsx", ".xls", ".xlsm"}
+_KNOWN_SUFFIXES = _TEXT_SUFFIXES | _BINARY_SUFFIXES
 
 
 def _suffix_for(filename: str) -> str:
     ext = os.path.splitext(filename or "")[1].lower()
-    return ext if ext in _TEXT_SUFFIXES else ".csv"
+    return ext if ext in _KNOWN_SUFFIXES else ".csv"
 
 
 def _output_basename(filename: str | None) -> str:
@@ -38,8 +41,22 @@ class handler(BaseHTTPRequestHandler):
 
         content = payload.get("content")
         if not content:
-            self._send_json(400, {"error": "Missing 'content' (dataset text)"})
+            self._send_json(400, {"error": "Missing 'content' (dataset content)"})
             return
+
+        encoding = payload.get("encoding") or "utf-8"
+        if encoding not in ("utf-8", "base64"):
+            self._send_json(400, {"error": f"Unsupported encoding '{encoding}'"})
+            return
+
+        if encoding == "base64":
+            try:
+                file_bytes = base64.b64decode(content, validate=True)
+            except (binascii.Error, ValueError):
+                self._send_json(400, {"error": "Invalid base64 in 'content'"})
+                return
+        else:
+            file_bytes = None
 
         if not os.environ.get("GEMINI_API_KEY"):
             self._send_json(500, {"error": "Server is not configured with GEMINI_API_KEY"})
@@ -64,9 +81,14 @@ class handler(BaseHTTPRequestHandler):
         suffix = _suffix_for(payload.get("filename"))
         tmp_path = None
         try:
-            with tempfile.NamedTemporaryFile(mode="w", suffix=suffix, delete=False) as tmp:
-                tmp.write(content)
-                tmp_path = tmp.name
+            if file_bytes is not None:
+                with tempfile.NamedTemporaryFile(mode="wb", suffix=suffix, delete=False) as tmp:
+                    tmp.write(file_bytes)
+                    tmp_path = tmp.name
+            else:
+                with tempfile.NamedTemporaryFile(mode="w", suffix=suffix, delete=False) as tmp:
+                    tmp.write(content)
+                    tmp_path = tmp.name
 
             agent = DataAnalystAgent()
             plan = agent.plan_dashboard(tmp_path, config=config, question=payload.get("question") or None)

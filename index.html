@@ -578,9 +578,9 @@
   <section class="card" id="config-card">
     <h2>Configuration</h2>
     <form id="analyze-form">
-      <label for="file">Dataset (CSV, TSV, or JSON)</label>
-      <input type="file" id="file" accept=".csv,.tsv,.json" required />
-      <p class="hint">Excel files are supported via the Python CLI (<code>datamind</code>), not this web form.</p>
+      <label for="file">Dataset (CSV, TSV, JSON, or Excel)</label>
+      <input type="file" id="file" accept=".csv,.tsv,.json,.xlsx,.xls,.xlsm" required />
+      <p class="hint">Max 4 MB. For a .xlsx workbook with multiple sheets, only the first sheet is read.</p>
 
       <div class="row">
         <div>
@@ -775,6 +775,9 @@
 
   downloadBtn.addEventListener("click", downloadWorkbook);
 
+  const MAX_FILE_BYTES = 4 * 1024 * 1024; // matches the platform's request body limit
+  const BINARY_EXTENSIONS = /\.(xlsx|xls|xlsm)$/i;
+
   function readFileAsText(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -784,12 +787,48 @@
     });
   }
 
+  function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        // readAsDataURL yields "data:<mime>;base64,<data>" - keep just the payload.
+        const commaIndex = reader.result.indexOf(",");
+        resolve(reader.result.slice(commaIndex + 1));
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Reads the server's response as text first and only then parses it as JSON, so a
+  // non-JSON response (a platform error page, a timeout, an oversized-payload
+  // rejection - none of which come from our own handler) surfaces as a clear,
+  // bounded error message instead of an opaque "Unexpected token ... is not valid
+  // JSON" thrown straight out of response.json().
+  async function parseJsonResponse(response) {
+    const rawText = await response.text();
+    try {
+      return JSON.parse(rawText);
+    } catch {
+      const snippet = rawText.trim().slice(0, 200);
+      throw new Error(
+        `The server returned an unexpected response (status ${response.status}).` +
+          (snippet ? ` ${snippet}` : " The request may have been too large or timed out.")
+      );
+    }
+  }
+
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const fileInput = document.getElementById("file");
     const file = fileInput.files[0];
     if (!file) return;
+
+    if (file.size > MAX_FILE_BYTES) {
+      setStatus(`That file is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Please use a file under 4 MB.`, "error", false);
+      return;
+    }
 
     submitBtn.disabled = true;
     downloadBtn.classList.remove("visible");
@@ -798,11 +837,13 @@
     resultEl.innerHTML = "";
 
     try {
-      const content = await readFileAsText(file);
+      const isBinary = BINARY_EXTENSIONS.test(file.name);
+      const content = isBinary ? await readFileAsBase64(file) : await readFileAsText(file);
 
       const payload = {
         filename: file.name,
         content,
+        encoding: isBinary ? "base64" : "utf-8",
         tool: document.getElementById("tool").value,
         depth: document.getElementById("depth").value,
         objective: document.getElementById("objective").value || null,
@@ -819,7 +860,7 @@
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
+      const data = await parseJsonResponse(response);
 
       if (!response.ok) {
         throw new Error(data.error || `Request failed with status ${response.status}`);

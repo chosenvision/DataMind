@@ -66,6 +66,24 @@ def test_invalid_config_value_returns_400():
     assert "preferred_tool" in data["error"]
 
 
+def test_unsupported_encoding_returns_400():
+    status, data = _post(
+        {"content": "a,b\n1,2\n", "encoding": "latin-1"},
+        env={"GEMINI_API_KEY": "fake-key"},
+    )
+    assert status == 400
+    assert "encoding" in data["error"]
+
+
+def test_invalid_base64_content_returns_400():
+    status, data = _post(
+        {"content": "not valid base64 !!!", "encoding": "base64", "filename": "x.xlsx"},
+        env={"GEMINI_API_KEY": "fake-key"},
+    )
+    assert status == 400
+    assert "base64" in data["error"]
+
+
 _MOCK_PLAN = {
     "dataset_classification": "Test",
     "executive_summary": "Column a totals 3 across two rows.",
@@ -96,3 +114,31 @@ def test_happy_path_returns_summary_and_workbook():
     wb = openpyxl.load_workbook(io.BytesIO(workbook_bytes))
     assert "Dashboard" in wb.sheetnames
     assert "Data" in wb.sheetnames
+
+
+def _sample_xlsx_base64() -> str:
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(["a", "b"])
+    ws.append([1, "x"])
+    ws.append([2, "y"])
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    return base64.b64encode(buffer.getvalue()).decode("ascii")
+
+
+def test_base64_excel_upload_is_decoded_and_processed():
+    with patch.dict(os.environ, {"GEMINI_API_KEY": "fake-key"}):
+        with patch.object(analyze_mod.DataAnalystAgent, "plan_dashboard", return_value=_MOCK_PLAN):
+            status, data = _post(
+                {
+                    "content": _sample_xlsx_base64(),
+                    "encoding": "base64",
+                    "filename": "sales.xlsx",
+                    "depth": "Quick Analysis",
+                }
+            )
+
+    assert status == 200
+    assert data["workbook_filename"] == "sales_dashboard.xlsx"
+    assert data["summary"]["kpis"] == [{"name": "Total A", "value": "3", "meaning": ""}]

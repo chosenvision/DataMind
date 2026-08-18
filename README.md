@@ -177,10 +177,18 @@ vercel dev
 - The Python runtime version is pinned via `.python-version` (3.12); function
   dependencies for Vercel are declared in the root `requirements.txt`
   (separate from `pyproject.toml`, which is for local/CLI installs).
-- The web form accepts CSV/TSV/JSON as *input* only, read client-side as text
-  and posted as JSON to `/api/analyze`. Excel files as input are only
-  supported via the `datamind` CLI/library. The *output* is always a real
-  `.xlsx` workbook regardless of input format.
+- The web form accepts CSV, TSV, JSON, and Excel (.xlsx/.xls/.xlsm) as input,
+  capped at 4 MB client-side (a generous margin under the platform's request
+  body limit). Text formats are read and posted as UTF-8; Excel files are
+  read as bytes, base64-encoded, and posted with `"encoding": "base64"` -
+  `/api/analyze` decodes accordingly before handing the file to pandas. The
+  *output* is always a real `.xlsx` workbook regardless of input format.
+- The frontend never calls `response.json()` directly on a fetch response -
+  it reads the body as text first and parses that, so a non-JSON response
+  (a platform-level crash page, a timeout, a rejected oversized payload -
+  none of which come from our own handler) surfaces as a clear, bounded
+  error message instead of an opaque "Unexpected token ... is not valid
+  JSON" thrown straight out of a failed `.json()` call.
 - There's no reliable way to generate a real `.pbix` (Power BI's binary
   project format) from Python, so "Power BI" support means: import the
   `Data` sheet of the generated workbook into Power BI Desktop, then use the
