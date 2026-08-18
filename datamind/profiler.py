@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import Any
 
@@ -8,6 +9,10 @@ MAX_PREVIEW_ROWS = 5
 
 _EXCEL_SUFFIXES = {".xlsx", ".xls", ".xlsm"}
 
+_CURRENCY_STRIP_RE = re.compile(r"[\$,\s]")
+_NUMERIC_TEXT_RE = re.compile(r"^[-+]?\d+(\.\d+)?$")
+_PAREN_NEGATIVE_RE = re.compile(r"^\(.*\)$")
+
 
 def load_dataframe(path: str | Path) -> pd.DataFrame:
     """Load a dataset (CSV/TSV/Excel/JSON) into a DataFrame using the same format
@@ -17,12 +22,49 @@ def load_dataframe(path: str | Path) -> pd.DataFrame:
 
 def _read_any(path: Path) -> pd.DataFrame:
     if path.suffix.lower() in _EXCEL_SUFFIXES:
-        return pd.read_excel(path)
-    if path.suffix.lower() == ".tsv":
-        return pd.read_csv(path, sep="\t")
-    if path.suffix.lower() == ".json":
-        return pd.read_json(path)
-    return pd.read_csv(path)
+        df = pd.read_excel(path)
+    elif path.suffix.lower() == ".tsv":
+        df = pd.read_csv(path, sep="\t")
+    elif path.suffix.lower() == ".json":
+        df = pd.read_json(path)
+    else:
+        df = pd.read_csv(path)
+    return _coerce_numeric_like_columns(df)
+
+
+def _coerce_numeric_like_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Convert text columns that are really numbers in disguise (e.g. "$1,618.50",
+    "(42.00)" for a negative) to real numeric dtype.
+
+    Exporting a spreadsheet to CSV commonly bakes currency formatting into the
+    cell text itself, which makes pandas load the column as strings. Left as-is,
+    every downstream aggregation (KPI cards, chart values, Excel SUMIFS formulas)
+    silently sees NaN for those cells and reports 0 instead of the real total.
+    Only columns where the vast majority of values match a plain formatted-number
+    pattern are converted, so genuine text/ID columns are left alone.
+    """
+    for col in df.columns:
+        series = df[col]
+        if pd.api.types.is_numeric_dtype(series) or pd.api.types.is_datetime64_any_dtype(series):
+            continue
+        text = series.astype("string").str.strip()
+        non_null = text.dropna()
+        if non_null.empty:
+            continue
+
+        # strip currency symbols/thousands separators first so "$ (42.00)" becomes
+        # "(42.00)" and is recognized as a parenthesized negative
+        stripped = text.str.replace(_CURRENCY_STRIP_RE, "", regex=True)
+        negative = stripped.str.match(_PAREN_NEGATIVE_RE).fillna(False)
+        unwrapped = stripped.str.slice(1, -1).where(negative, stripped)
+
+        looks_numeric = unwrapped.dropna().str.match(_NUMERIC_TEXT_RE)
+        if looks_numeric.empty or looks_numeric.mean() < 0.9:
+            continue
+
+        numeric = pd.to_numeric(unwrapped, errors="coerce")
+        df[col] = numeric.where(~negative, -numeric)
+    return df
 
 
 def _column_profile(series: pd.Series) -> dict[str, Any]:

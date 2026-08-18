@@ -23,7 +23,11 @@ Studio API key is enough to run this end to end, no billing setup required.
 2. `datamind/profiler.py` loads your dataset (CSV/TSV/JSON/Excel) and computes
    shape, dtypes, missingness, duplicates, and per-column statistics with
    pandas. This gives the model verified ground-truth facts instead of asking
-   it to eyeball numbers from a raw preview.
+   it to eyeball numbers from a raw preview. Columns that are numbers stored
+   as formatted text (e.g. a CSV exported from Excel with `"$ 1,618.50"` or
+   `"(42.00)"` for a negative) are detected and converted to real numeric
+   dtype at load time — otherwise every downstream sum/average would silently
+   see `NaN` and every KPI/chart for that column would read as zero.
 3. `datamind/agent.py`'s `plan_dashboard()` sends the role prompt + dataset
    profile + your configuration to Gemini and gets back a compact JSON plan:
    which KPIs to show (column + aggregation, e.g. `sum(revenue)`), which
