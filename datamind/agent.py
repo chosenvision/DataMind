@@ -11,7 +11,12 @@ from datamind.profiler import format_profile_summary, profile_dataset
 from datamind.role import load_role_prompt
 
 DEFAULT_MODEL = os.environ.get("DATAMIND_MODEL", "gemini-2.5-flash")
-DEFAULT_MAX_TOKENS = 8192
+DEFAULT_MAX_TOKENS = 16384
+_ERROR_SNIPPET_CHARS = 200
+
+
+class DashboardPlanError(RuntimeError):
+    """Raised when Gemini's structured dashboard plan was cut off or wasn't valid JSON."""
 
 _DASHBOARD_PLAN_INSTRUCTIONS = """
 # OUTPUT FORMAT — DASHBOARD PLAN (this overrides the "Final Deliverable" narrative format)
@@ -31,13 +36,13 @@ matching exactly this shape:
       "column": "<exact column name from the dataset>",
       "agg": "sum",
       "format": "currency",
-      "meaning": "one line shown as the KPI card caption",
-      "definition": "one sentence, plain language",
+      "meaning": "<=8 words, shown as the KPI card caption",
+      "definition": "<=15 words, plain language",
       "formula_text": "e.g. Net Sales = Gross Sales - Discounts",
-      "why_it_matters": "one sentence",
-      "good_result": "what a healthy value looks like",
-      "bad_result": "what a concerning value looks like",
-      "best_visualization": "e.g. Bar chart by region"
+      "why_it_matters": "<=15 words",
+      "good_result": "<=10 words",
+      "bad_result": "<=10 words",
+      "best_visualization": "e.g. Bar chart by region, <=6 words"
     }
   ],
   "charts": [
@@ -77,19 +82,50 @@ Rules:
   Reference sheet), 1-5 charts, each insight/risk/opportunity a single short
   sentence — write for someone with no data background, not a technical audience.
 - Every claim must be traceable to the dataset profile; never fabricate numbers.
+- This is a JSON payload, not prose: keep every field to the word limit shown
+  above. Terse is correct here, not incomplete — the response must fit in one
+  output, so do not pad definitions/insights/reasoning beyond what's asked for.
 """.strip()
 
 
+def _check_finish_reason(response: Any) -> None:
+    """Raise a clear, actionable error if generation stopped before completing,
+    rather than letting a truncated response fail later with a cryptic JSON error."""
+    candidates = getattr(response, "candidates", None) or []
+    if not candidates:
+        return
+    reason = getattr(candidates[0], "finish_reason", None)
+    reason_name = getattr(reason, "name", reason)
+    if not reason_name or reason_name == "STOP":
+        return
+    if reason_name == "MAX_TOKENS":
+        raise DashboardPlanError(
+            "The analysis response was cut off because it hit the model's output "
+            "limit before finishing. Try a lower Analysis Depth (e.g. Quick Analysis) "
+            "or a smaller/simpler dataset."
+        )
+    raise DashboardPlanError(f"The analysis response stopped early ({reason_name}). Please try again.")
+
+
 def _extract_json(text: str) -> dict[str, Any]:
-    text = text.strip()
-    if text.startswith("```"):
-        text = text.split("\n", 1)[1] if "\n" in text else text
-        if text.endswith("```"):
-            text = text.rsplit("```", 1)[0]
-        text = text.strip()
-        if text.startswith("json"):
-            text = text[4:].strip()
-    return json.loads(text)
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned
+        if cleaned.endswith("```"):
+            cleaned = cleaned.rsplit("```", 1)[0]
+        cleaned = cleaned.strip()
+        if cleaned.startswith("json"):
+            cleaned = cleaned[4:].strip()
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError as exc:
+        start = max(0, exc.pos - _ERROR_SNIPPET_CHARS)
+        snippet = cleaned[start : exc.pos]
+        raise DashboardPlanError(
+            "The analysis response wasn't valid JSON, which usually means it was cut "
+            "off partway through. Try a lower Analysis Depth or a smaller dataset. "
+            f"({exc.msg} near: ...{snippet!r})"
+        ) from exc
 
 
 class DataAnalystAgent:
@@ -182,4 +218,5 @@ class DataAnalystAgent:
                 response_mime_type="application/json",
             ),
         )
+        _check_finish_reason(response)
         return _extract_json(response.text)

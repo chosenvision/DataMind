@@ -2,7 +2,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from datamind.agent import DEFAULT_MODEL, DataAnalystAgent
+from datamind.agent import DEFAULT_MAX_TOKENS, DEFAULT_MODEL, DataAnalystAgent
 from datamind.config import (
     DEFAULT_ANALYSIS_DEPTH,
     VALID_ANALYSIS_DEPTHS,
@@ -40,7 +40,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--style", default=None, help="Preferred dashboard style")
     parser.add_argument("--question", default=None, help="A specific ad-hoc question to answer")
     parser.add_argument("--model", default=DEFAULT_MODEL)
-    parser.add_argument("--max-tokens", type=int, default=8192)
+    parser.add_argument("--max-tokens", type=int, default=DEFAULT_MAX_TOKENS)
     parser.add_argument("--output", default=None, help="Write the narrative report to this file instead of stdout")
     parser.add_argument(
         "--output-xlsx",
