@@ -23,6 +23,7 @@ from typing import Any
 import pandas as pd
 from openpyxl import Workbook
 from openpyxl.chart import BarChart, DoughnutChart, LineChart, Reference
+from openpyxl.chart.data_source import AxDataSource, NumData, NumVal, StrData, StrRef, StrVal
 from openpyxl.chart.series import DataPoint
 from openpyxl.chart.shapes import GraphicalProperties
 from openpyxl.drawing.spreadsheet_drawing import AnchorMarker, TwoCellAnchor
@@ -420,6 +421,7 @@ def _write_breakdown_table(
     return {
         "chart": chart,
         "kind": kind,
+        "series": series,
         "header_row": header_row,
         "first_data_row": first_data_row,
         "last_data_row": last_data_row,
@@ -494,15 +496,45 @@ def _build_calc_sheet(
 # ---------------------------------------------------------------------------
 
 
+def _populate_series_cache(series_obj, sheet_name: str, first_row: int, last_row: int, labels: list, values: list, name: str) -> None:
+    """Embed real computed values into the chart's numCache/strCache, not just a
+    formula reference to (currently uncalculated) cells.
+
+    openpyxl's add_data()/set_categories() only ever write the formula reference -
+    no numCache, and categories always come out as a numRef even when the labels are
+    text. A chart with no cache and a numRef pointing at text cells can render as
+    completely empty in many viewers (and even in Excel, before/without a full
+    recalculation pass), regardless of whether the underlying formulas are correct.
+    Populating the cache with the real pandas-computed values makes the chart display
+    correctly immediately; the formula reference is left in place so Excel still
+    recalculates and redraws it live when a filter changes.
+    """
+    n = len(values)
+    series_obj.val.numRef.numCache = NumData(ptCount=n, pt=[NumVal(idx=i, v=float(v)) for i, v in enumerate(values)])
+    series_obj.cat = AxDataSource(
+        strRef=StrRef(
+            f=f"'{sheet_name}'!$A${first_row}:$A${last_row}",
+            strCache=StrData(ptCount=n, pt=[StrVal(idx=i, v=str(label)) for i, label in enumerate(labels)]),
+        )
+    )
+    if series_obj.tx and series_obj.tx.strRef:
+        series_obj.tx.strRef.strCache = StrData(ptCount=1, pt=[StrVal(idx=0, v=str(name))])
+
+
 def _build_chart(calc_ws, table: dict[str, Any]) -> Any:
     kind = table["kind"]
     header_row = table["header_row"]
     first = table["first_data_row"]
     last = table["last_data_row"]
     title = table["chart"].get("title", "Chart")
+    series = table["series"]
+    labels = [str(v) for v in series.index]
+    sheet_name = calc_ws.title
     cat_ref = Reference(calc_ws, min_col=1, min_row=first, max_row=last)
 
     if kind == "diverging":
+        pos_values = series.clip(lower=0).tolist()
+        neg_values = series.clip(upper=0).tolist()
         chart = BarChart()
         chart.type = "bar"
         chart.grouping = "stacked"
@@ -510,6 +542,8 @@ def _build_chart(calc_ws, table: dict[str, Any]) -> Any:
         chart.add_data(Reference(calc_ws, min_col=3, min_row=header_row, max_row=last), titles_from_data=True)
         chart.add_data(Reference(calc_ws, min_col=4, min_row=header_row, max_row=last), titles_from_data=True)
         chart.set_categories(cat_ref)
+        _populate_series_cache(chart.series[0], sheet_name, first, last, labels, pos_values, "Pos")
+        _populate_series_cache(chart.series[1], sheet_name, first, last, labels, neg_values, "Neg")
         chart.series[0].graphicalProperties.solidFill = POS_COLOR
         chart.series[1].graphicalProperties.solidFill = NEG_COLOR
         chart.y_axis.majorGridlines = None
@@ -517,6 +551,7 @@ def _build_chart(calc_ws, table: dict[str, Any]) -> Any:
         chart = DoughnutChart()
         chart.add_data(Reference(calc_ws, min_col=2, min_row=header_row, max_row=last), titles_from_data=True)
         chart.set_categories(cat_ref)
+        _populate_series_cache(chart.series[0], sheet_name, first, last, labels, series.tolist(), title)
         n_slices = last - header_row
         chart.series[0].data_points = [
             DataPoint(idx=i, spPr=GraphicalProperties(solidFill=PALETTE[i % len(PALETTE)])) for i in range(n_slices)
@@ -525,6 +560,7 @@ def _build_chart(calc_ws, table: dict[str, Any]) -> Any:
         chart = LineChart()
         chart.add_data(Reference(calc_ws, min_col=2, min_row=header_row, max_row=last), titles_from_data=True)
         chart.set_categories(cat_ref)
+        _populate_series_cache(chart.series[0], sheet_name, first, last, labels, series.tolist(), title)
         chart.series[0].graphicalProperties.line.solidFill = PALETTE[0]
         chart.series[0].graphicalProperties.line.width = 24000
         chart.y_axis.majorGridlines = None
@@ -533,6 +569,7 @@ def _build_chart(calc_ws, table: dict[str, Any]) -> Any:
         chart.type = "col"
         chart.add_data(Reference(calc_ws, min_col=2, min_row=header_row, max_row=last), titles_from_data=True)
         chart.set_categories(cat_ref)
+        _populate_series_cache(chart.series[0], sheet_name, first, last, labels, series.tolist(), title)
         chart.series[0].graphicalProperties.solidFill = PALETTE[1]
         chart.y_axis.majorGridlines = None
 

@@ -2,6 +2,7 @@ from io import BytesIO
 from pathlib import Path
 
 import openpyxl
+import pandas as pd
 import pytest
 
 from datamind.dashboard import (
@@ -329,6 +330,77 @@ def test_dashboard_five_charts_all_slots_no_overlap(df):
     for i in range(len(spans)):
         for j in range(i + 1, len(spans)):
             assert not _spans_overlap(spans[i], spans[j]), (spans[i], spans[j])
+
+
+def test_chart_series_have_populated_value_cache(df):
+    """openpyxl's add_data()/set_categories() only ever write a formula reference to
+    the (as-yet uncalculated) Calc cells - no numCache/strCache. A chart with an empty
+    cache can render as completely blank in many viewers regardless of whether the
+    underlying formula is correct, since they draw from the cache before any
+    recalculation happens. The cache must hold the real, pandas-computed numbers."""
+    plan = {
+        "dataset_classification": "Sales",
+        "filter_columns": [],
+        "kpis": [{"name": "Total Revenue", "column": "revenue", "agg": "sum", "format": "currency"}],
+        "charts": [{"title": "Revenue by Region", "type": "bar", "category_column": "region", "value_column": "revenue", "agg": "sum"}],
+    }
+    wb = build_workbook(df, plan)
+    ws = wb["Dashboard"]
+    series_obj = ws._charts[0].series[0]
+
+    assert series_obj.val.numRef.numCache is not None
+    cached_values = [pt.v for pt in series_obj.val.numRef.numCache.pt]
+    expected = df.groupby("region")["revenue"].sum().sort_values(key=abs, ascending=False)
+    assert cached_values == pytest.approx(list(expected.values))
+
+
+def test_chart_categories_use_str_ref_not_num_ref(df):
+    """Category labels here are always text (region/product/month names). openpyxl's
+    set_categories() defaults to numRef even for text cells, which is semantically
+    wrong and a plausible cause of a blank or broken category axis."""
+    plan = {
+        "dataset_classification": "Sales",
+        "filter_columns": [],
+        "kpis": [{"name": "Total Revenue", "column": "revenue", "agg": "sum", "format": "currency"}],
+        "charts": [{"title": "Revenue by Region", "type": "bar", "category_column": "region", "value_column": "revenue", "agg": "sum"}],
+    }
+    wb = build_workbook(df, plan)
+    ws = wb["Dashboard"]
+    cat = ws._charts[0].series[0].cat
+    assert cat.numRef is None
+    assert cat.strRef is not None
+    cached_labels = [pt.v for pt in cat.strRef.strCache.pt]
+    expected_labels = list(df.groupby("region")["revenue"].sum().sort_values(key=abs, ascending=False).index)
+    assert cached_labels == expected_labels
+
+
+def test_diverging_chart_pos_neg_series_have_correct_cached_values():
+    frame = pd.DataFrame(
+        {
+            "segment": ["Enterprise", "Enterprise", "Enterprise", "Government", "Government", "Government", "SMB", "SMB"],
+            "profit": [-500, -300, 200, 1000, 800, 1200, 50, -20],
+        }
+    )
+    plan = {
+        "dataset_classification": "Finance",
+        "filter_columns": [],
+        "kpis": [{"name": "Total Profit", "column": "profit", "agg": "sum", "format": "currency"}],
+        "charts": [{"title": "Profit by Segment", "type": "bar", "category_column": "segment", "value_column": "profit", "agg": "sum"}],
+    }
+    wb = build_workbook(frame, plan)
+    ws = wb["Dashboard"]
+    pos_series, neg_series = ws._charts[0].series
+
+    labels = [pt.v for pt in pos_series.cat.strRef.strCache.pt]
+    pos_values = dict(zip(labels, [pt.v for pt in pos_series.val.numRef.numCache.pt]))
+    neg_values = dict(zip(labels, [pt.v for pt in neg_series.val.numRef.numCache.pt]))
+
+    assert pos_values["Government"] == pytest.approx(3000)
+    assert neg_values["Government"] == pytest.approx(0)
+    assert pos_values["Enterprise"] == pytest.approx(0)
+    assert neg_values["Enterprise"] == pytest.approx(-600)
+    assert pos_values["SMB"] == pytest.approx(30)
+    assert neg_values["SMB"] == pytest.approx(0)
 
 
 # ---------------------------------------------------------------------------
